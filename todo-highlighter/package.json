@@ -1,0 +1,15 @@
+{
+  "$schema": "https://fresh-editor.dev/schemas/package.schema.json",
+  "name": "todo-highlighter",
+  "version": "1.0.0",
+  "description": "Highlights TODO, FIXME, HACK, and other comment annotations",
+  "type": "plugin",
+  "author": "Fresh Editor Team",
+  "license": "MIT",
+  "repository": "https://github.com/sinelaw/fresh-plugins",
+  "keywords": ["todo", "fixme", "highlighting", "annotations"],
+  "fresh": {
+    "min_version": "0.1.0",
+    "entry": "todo_highlighter.ts"
+  }
+}

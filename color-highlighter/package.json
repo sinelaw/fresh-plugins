@@ -1,0 +1,15 @@
+{
+  "$schema": "https://fresh-editor.dev/schemas/package.schema.json",
+  "name": "color-highlighter",
+  "version": "1.0.0",
+  "description": "Highlights color codes (hex, rgb, hsl) with their actual colors",
+  "type": "plugin",
+  "author": "Fresh Editor Team",
+  "license": "MIT",
+  "repository": "https://github.com/sinelaw/fresh-plugins",
+  "keywords": ["color", "css", "highlighting", "preview"],
+  "fresh": {
+    "min_version": "0.1.0",
+    "entry": "color_highlighter.ts"
+  }
+}
