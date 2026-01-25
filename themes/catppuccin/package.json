@@ -1,0 +1,14 @@
+{
+  "$schema": "https://fresh-editor.dev/schemas/package.schema.json",
+  "name": "catppuccin",
+  "version": "1.0.0",
+  "description": "Catppuccin theme variants (Latte, Frappe, Macchiato, Mocha) - soothing pastel themes",
+  "type": "theme",
+  "author": "Catppuccin",
+  "license": "MIT",
+  "repository": "https://github.com/sinelaw/fresh-plugins",
+  "keywords": ["theme", "catppuccin", "pastel", "dark", "light"],
+  "fresh": {
+    "min_version": "0.1.0"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "$schema": "https://fresh-editor.dev/schemas/package.schema.json",
+  "name": "xscriptor",
+  "version": "1.0.0",
+  "description": "Xscriptor city-themed color schemes (Berlin, Bogota, Helsinki, and more)",
+  "type": "theme",
+  "author": "Xscriptor",
+  "license": "MIT",
+  "repository": "https://github.com/sinelaw/fresh-plugins",
+  "keywords": ["theme", "xscriptor", "dark", "city"],
+  "fresh": {
+    "min_version": "0.1.0"
+  }
+}
