@@ -9,7 +9,7 @@
   "keywords": ["solidity", "ethereum", "smart-contracts", "blockchain", "web3"],
   "fresh": {
     "grammar": {
-      "file": "grammars/solidity.tmLanguage.json",
+      "file": "grammars/solidity.sublime-syntax",
       "extensions": ["sol"]
     },
     "language": {
