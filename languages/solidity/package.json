@@ -1,0 +1,28 @@
+{
+  "$schema": "https://raw.githubusercontent.com/sinelaw/fresh/main/crates/fresh-editor/plugins/schemas/package.schema.json",
+  "name": "solidity",
+  "version": "0.1.0",
+  "description": "Solidity language support for Fresh - syntax highlighting and LSP for smart contracts",
+  "type": "language",
+  "author": "",
+  "license": "MIT",
+  "keywords": ["solidity", "ethereum", "smart-contracts", "blockchain", "web3"],
+  "fresh": {
+    "grammar": {
+      "file": "grammars/solidity.tmLanguage.json",
+      "extensions": ["sol"]
+    },
+    "language": {
+      "commentPrefix": "//",
+      "blockCommentStart": "/*",
+      "blockCommentEnd": "*/",
+      "tabSize": 4,
+      "autoIndent": true
+    },
+    "lsp": {
+      "command": "solidity-ls",
+      "args": ["--stdio"],
+      "autoStart": true
+    }
+  }
+}
