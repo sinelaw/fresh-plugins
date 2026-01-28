@@ -1,0 +1,28 @@
+{
+  "$schema": "https://raw.githubusercontent.com/sinelaw/fresh/main/crates/fresh-editor/plugins/schemas/package.schema.json",
+  "name": "hare",
+  "version": "0.1.0",
+  "description": "Hare programming language support - syntax highlighting and LSP",
+  "type": "language",
+  "author": "",
+  "license": "MIT",
+  "keywords": ["hare", "systems-programming"],
+  "fresh": {
+    "grammar": {
+      "file": "grammars/Hare.sublime-syntax",
+      "extensions": ["ha"]
+    },
+    "language": {
+      "commentPrefix": "//",
+      "tabSize": 8,
+      "useTabs": true,
+      "autoIndent": true,
+      "showWhitespaceTabs": false
+    },
+    "lsp": {
+      "command": "harepls",
+      "args": [],
+      "autoStart": true
+    }
+  }
+}
