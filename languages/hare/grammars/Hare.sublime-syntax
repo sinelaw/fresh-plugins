@@ -1,0 +1,113 @@
+%YAML 1.2
+---
+# Hare programming language syntax highlighting
+# Derived from https://github.com/artursartamonovs/hare-highlight (MIT License)
+name: Hare
+file_extensions:
+  - ha
+scope: source.hare
+
+variables:
+  bin_digit: '[01]'
+  oct_digit: '[0-7]'
+  dec_digit: '\d'
+  hex_digit: '\h'
+  nondigit: '[a-zA-Z_]'
+  identifier: '{{nondigit}}({{dec_digit}}|{{nondigit}})*'
+
+contexts:
+  prototype:
+    - include: comments
+
+  main:
+    - include: keywords
+    - include: use_keyword
+    - include: numbers
+    - include: characters
+    - include: strings
+    - include: raw_strings
+    - include: operators
+
+  keywords:
+    - match: '\b(abort|align|alloc|append|as|assert|bool|break|case|char|const|continue|def|defer|delete|else|enum|export|f32|f64|false|fn|for|free|i16|i32|i64|i8|if|int|is|len|let|match|never|null|nullable|offset|return|rune|size|static|str|struct|switch|true|type|u16|u32|u64|u8|uint|uintptr|union|vaarg|vaend|valist|vastart|void|_|yield)\b'
+      scope: keyword.control.hare
+    - match: '(@[a-z]+)'
+      scope: keyword.attribute.hare
+
+  use_keyword:
+    - match: '\buse\b'
+      scope: keyword.control.use.hare
+      push:
+        - match: '\b[a-zA-Z][a-zA-Z0-9_:]*\b'
+          scope: meta.preprocessor.hare
+        - match: ';'
+          scope: punctuation.terminator.hare
+          pop: true
+
+  numbers:
+    - match: '\b(\+|-)?[0-9]+\.[0-9]+((e|E)?(\+|-)?[0-9]+)?(f32|f64)?'
+      scope: constant.numeric.float.hare
+    - match: '\b(\+|-)?[0-9]+((e|E)(\+|-)?[0-9]+)?(f32|f64)\b'
+      scope: constant.numeric.float.hare
+    - match: '\b(-)?[0-9]+(i64|i32|i16|i8|u64|u32|u16|u8|i|u|z)?\b'
+      scope: constant.numeric.integer.hare
+    - match: '\b(0x)({{hex_digit}}+)(i64|i32|i16|i8|u64|u32|u16|u8|i|u|z)?\b'
+      scope: constant.numeric.hex.hare
+    - match: '\b(0b)({{bin_digit}}+)(i64|i32|i16|i8|u64|u32|u16|u8|i|u|z)?\b'
+      scope: constant.numeric.binary.hare
+    - match: '\b(0o)({{oct_digit}}+)(i64|i32|i16|i8|u64|u32|u16|u8|i|u|z)?\b'
+      scope: constant.numeric.octal.hare
+
+  characters:
+    - match: '''([^''\\]|\\(x[0-9A-Fa-f]{2}|[0-2][0-7]{0,2}|3[0-6][0-7]?|37[0-7]?|[4-7][0-7]?|.))'''
+      scope: string.quoted.single.hare
+
+  strings:
+    - match: '"'
+      scope: punctuation.definition.string.begin.hare
+      push:
+        - meta_scope: string.quoted.double.hare
+        - meta_include_prototype: false
+        - match: '"'
+          scope: punctuation.definition.string.end.hare
+          pop: true
+        - match: '\\(0|a|b|f|n|r|t|v|\\|''|"|x[0-9a-fA-F]{2}|u[0-9a-fA-F]{4}|U[0-9a-fA-F]{8})'
+          scope: constant.character.escape.hare
+        - match: '\{\{|\}\}'
+          scope: constant.character.format.hare
+        - match: '\{([0-9]*(:([0\-\+\=\_\ ]*(\.)?[0-9]*(x|X|o|b)?(\.[0-9]*)?|[efgFs\.UES2]*))?|[0-9]*%[0-9]*)\}'
+          scope: constant.character.format.hare
+
+  raw_strings:
+    - match: '`'
+      scope: punctuation.definition.string.begin.hare
+      push:
+        - meta_scope: string.quoted.raw.hare
+        - meta_include_prototype: false
+        - match: '`'
+          scope: punctuation.definition.string.end.hare
+          pop: true
+        - match: '\{\{|\}\}'
+          scope: constant.character.format.hare
+        - match: '\{([0-9]*(:([0\-\+\=\_\ ]*(\.)?[0-9]*(x|X|o|b)?(\.[0-9]*)?|[efgFs\.UES2]*))?|[0-9]*%[0-9]*)\}'
+          scope: constant.character.format.hare
+
+  comments:
+    - match: '//'
+      scope: punctuation.definition.comment.hare
+      push:
+        - meta_scope: comment.line.double-slash.hare
+        - match: '$\n?'
+          pop: true
+
+  operators:
+    - match: '<<|>>'
+      scope: keyword.operator.bitwise.hare
+    - match: '\=|\+\=|-\=|\*\=|/\=|%\=|<<\=|>>\=|&\=|\|\=|\^\=|&&\=|\|\|\=|\^\^\='
+      scope: keyword.operator.assignment.hare
+    - match: '\+|\-|~|!|\*|&|/|%|\^'
+      scope: keyword.operator.arithmetic.hare
+    - match: '<|>|<\=|>\=|\=\=|\!\='
+      scope: keyword.operator.comparison.hare
+    - match: '\=>|::|:|\?|!|\||\.\.\.|\.\.|\.'
+      scope: keyword.operator.misc.hare
