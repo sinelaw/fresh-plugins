@@ -1,0 +1,15 @@
+{
+  "$schema": "https://fresh-editor.dev/schemas/package.schema.json",
+  "name": "csv",
+  "version": "1.0.0",
+  "description": "CSV/TSV spreadsheet viewer and editor with Lotus 1-2-3 style UI",
+  "type": "plugin",
+  "author": "Fresh Editor Team",
+  "license": "MIT",
+  "repository": "https://github.com/sinelaw/fresh-plugins",
+  "keywords": ["csv", "tsv", "spreadsheet", "data", "table"],
+  "fresh": {
+    "min_version": "0.1.0",
+    "entry": "csv.ts"
+  }
+}

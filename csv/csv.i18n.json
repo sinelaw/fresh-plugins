@@ -1,0 +1,17 @@
+{
+  "en": {
+    "cmd.open": "Open as Spreadsheet",
+    "cmd.open_desc": "Open current CSV/TSV buffer as interactive spreadsheet",
+    "cmd.open_file": "Open CSV File",
+    "cmd.open_file_desc": "Open a CSV/TSV file as interactive spreadsheet",
+    "cmd.new": "New Spreadsheet",
+    "cmd.new_desc": "Create a new empty spreadsheet",
+    "status.opened": "Spreadsheet opened",
+    "status.saved": "Spreadsheet saved",
+    "status.modified": "Modified",
+    "status.no_data": "No data",
+    "help.navigate": "Arrow keys to navigate, Tab for next cell",
+    "help.edit": "Enter to edit, Escape to cancel",
+    "help.save": "s to save, q to close"
+  }
+}
