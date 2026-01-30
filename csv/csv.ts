@@ -275,6 +275,7 @@ async function enableCsvView(bufferId: number): Promise<void> {
   csvBuffers.add(bufferId);
 
   editor.setLineNumbers(bufferId, false);
+  editor.setLineWrap(bufferId, null, false);
   editor.refreshLines(bufferId);
 
   editor.setStatus(`Spreadsheet: ${config.numColumns} columns`);
@@ -290,6 +291,7 @@ function disableCsvView(bufferId: number): void {
   bufferConfigs.delete(bufferId);
 
   editor.setLineNumbers(bufferId, true);
+  editor.setLineWrap(bufferId, null, true);
   editor.clearViewTransform(bufferId, null);
   editor.refreshLines(bufferId);
 
