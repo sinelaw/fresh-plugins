@@ -1,0 +1,1 @@
+../../fresh/crates/fresh-editor/plugins/lib/fresh.d.ts
