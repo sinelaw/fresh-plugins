@@ -1,5 +1,7 @@
 {
   "en": {
+    "cmd.toggle": "Toggle Spreadsheet View",
+    "cmd.toggle_desc": "Toggle between text view and spreadsheet view for CSV/TSV files",
     "cmd.open": "Open as Spreadsheet",
     "cmd.open_desc": "Open current CSV/TSV buffer as interactive spreadsheet",
     "cmd.open_file": "Open CSV File",
