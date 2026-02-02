@@ -1,0 +1,35 @@
+{
+  "$schema": "https://raw.githubusercontent.com/sinelaw/fresh/main/crates/fresh-editor/plugins/schemas/package.schema.json",
+  "name": "elixir",
+  "version": "0.2.0",
+  "description": "Elixir programming language support - syntax highlighting, LSP integration, and installation helpers",
+  "type": "bundle",
+  "author": "",
+  "license": "MIT",
+  "keywords": ["elixir", "erlang", "beam", "functional", "expert"],
+  "fresh": {
+    "languages": [
+      {
+        "id": "elixir",
+        "grammar": {
+          "file": "grammars/Elixir.sublime-syntax",
+          "extensions": ["ex", "exs"]
+        },
+        "language": {
+          "commentPrefix": "#",
+          "tabSize": 2,
+          "useTabs": false,
+          "autoIndent": true
+        },
+        "lsp": {
+          "command": "elixir-ls",
+          "args": ["--stdio"],
+          "autoStart": true
+        }
+      }
+    ],
+    "plugins": [
+      { "entry": "plugins/elixir-lsp.ts" }
+    ]
+  }
+}
