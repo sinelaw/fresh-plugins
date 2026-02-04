@@ -1,0 +1,27 @@
+{
+  "$schema": "https://raw.githubusercontent.com/sinelaw/fresh/main/crates/fresh-editor/plugins/schemas/package.schema.json",
+  "name": "zenc",
+  "version": "0.1.0",
+  "description": "Zen-C language support - modern systems programming with syntax highlighting and LSP integration",
+  "type": "language",
+  "author": "Noam Lewis",
+  "license": "MIT",
+  "keywords": ["zenc", "zen-c", "systems", "c", "low-level"],
+  "fresh": {
+    "grammar": {
+      "file": "grammars/ZenC.sublime-syntax",
+      "extensions": ["zc"]
+    },
+    "language": {
+      "commentPrefix": "//",
+      "tabSize": 4,
+      "useTabs": false,
+      "autoIndent": true
+    },
+    "lsp": {
+      "command": "zc",
+      "args": ["lsp"],
+      "autoStart": true
+    }
+  }
+}
