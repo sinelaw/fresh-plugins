@@ -1,0 +1,74 @@
+// A simple hello world module to test Zen-C LSP support.
+import "std/io.zc"
+
+// Greet someone by name
+fn greet(name: string) -> string {
+    return "Hello, {name}!"
+}
+
+// A simple struct with a method
+struct Person {
+    name: string,
+    age: u32,
+}
+
+impl Person {
+    fn new(name: string, age: u32) -> Self {
+        return Person { name: name, age: age }
+    }
+
+    fn introduce(self) {
+        io::println("I'm {self.name}, {self.age} years old.")
+    }
+}
+
+// Pattern matching example
+fn describe_number(n: i32) -> string {
+    match n {
+        0 => "zero",
+        1..=9 => "single digit",
+        10..99 => "double digit",
+        _ => "large number",
+    }
+}
+
+// Generic function
+fn swap<T>(a: mut *T, b: mut *T) {
+    let temp = *a
+    *a = *b
+    *b = temp
+}
+
+// Trait example
+trait Printable {
+    fn to_string(self) -> string
+}
+
+impl Printable for Person {
+    fn to_string(self) -> string {
+        return "{self.name} ({self.age})"
+    }
+}
+
+// Async example
+async fn fetch_data(url: string) -> string {
+    // Simulated async operation
+    await io::sleep(100)
+    return "data from {url}"
+}
+
+// Entry point
+fn main() {
+    let message = greet("Fresh Editor")
+    io::println(message)
+
+    let person = Person::new("Alice", 30)
+    person.introduce()
+
+    // Defer for cleanup
+    let file = io::open("test.txt")
+    defer file.close()
+
+    // Use the file...
+    io::println("File opened successfully")
+}

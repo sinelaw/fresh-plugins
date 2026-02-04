@@ -1,0 +1,32 @@
+{
+  "$schema": "https://raw.githubusercontent.com/sinelaw/fresh/main/crates/fresh-editor/plugins/schemas/package.schema.json",
+  "name": "templ",
+  "version": "0.1.0",
+  "description": "Templ language support - HTML templates for Go with syntax highlighting and LSP integration",
+  "type": "language",
+  "author": "Noam Lewis",
+  "license": "MIT",
+  "keywords": ["templ", "go", "golang", "html", "template"],
+  "fresh": {
+    "grammar": {
+      "file": "grammars/Templ.sublime-syntax",
+      "extensions": ["templ"]
+    },
+    "language": {
+      "commentPrefix": "//",
+      "tabSize": 4,
+      "useTabs": true,
+      "autoIndent": true,
+      "showWhitespaceTabs": false,
+      "formatter": {
+        "command": "templ",
+        "args": ["fmt"]
+      }
+    },
+    "lsp": {
+      "command": "templ",
+      "args": ["lsp"],
+      "autoStart": true
+    }
+  }
+}

@@ -1,0 +1,245 @@
+%YAML 1.2
+---
+# Zen-C syntax highlighting
+# https://github.com/z-libs/Zen-C
+# https://www.zenc-lang.org/
+name: Zen-C
+scope: source.zenc
+version: 2
+
+file_extensions:
+  - zc
+
+first_line_match: '^#!.*\bzc\b'
+
+variables:
+  ident: '[a-zA-Z_][a-zA-Z0-9_]*'
+  int_suffix: '(?:i8|i16|i32|i64|i128|u8|u16|u32|u64|u128)?'
+  float_suffix: '(?:f32|f64)?'
+
+contexts:
+  prototype:
+    - include: comments
+
+  main:
+    - include: statements
+
+  statements:
+    - include: imports
+    - include: attributes
+    - include: keywords
+    - include: types
+    - include: functions
+    - include: literals
+    - include: operators
+    - include: punctuation
+
+  comments:
+    - match: '///'
+      scope: punctuation.definition.comment.zenc
+      push:
+        - meta_scope: comment.line.documentation.zenc
+        - match: $\n?
+          pop: true
+    - match: '//'
+      scope: punctuation.definition.comment.zenc
+      push:
+        - meta_scope: comment.line.double-slash.zenc
+        - match: $\n?
+          pop: true
+    - match: '/\*'
+      scope: punctuation.definition.comment.begin.zenc
+      push:
+        - meta_scope: comment.block.zenc
+        - match: '\*/'
+          scope: punctuation.definition.comment.end.zenc
+          pop: true
+
+  imports:
+    - match: \b(import)\b
+      scope: keyword.control.import.zenc
+      push:
+        - meta_scope: meta.import.zenc
+        - match: '"'
+          scope: punctuation.definition.string.begin.zenc
+          push:
+            - meta_scope: string.quoted.double.zenc
+            - match: '"'
+              scope: punctuation.definition.string.end.zenc
+              pop: 2
+            - match: '[^"]*'
+              scope: string.quoted.double.zenc
+
+  attributes:
+    - match: '(@)({{ident}})'
+      captures:
+        1: punctuation.definition.attribute.zenc
+        2: entity.other.attribute-name.zenc
+
+  keywords:
+    # Storage and declarations
+    - match: \b(let|def|fn|struct|enum|union|trait|impl|type)\b
+      scope: keyword.declaration.zenc
+    # Visibility
+    - match: \b(pub)\b
+      scope: storage.modifier.visibility.zenc
+    # Mutability
+    - match: \b(mut|const)\b
+      scope: storage.modifier.zenc
+    # Control flow
+    - match: \b(if|else|match|for|while|loop|break|continue|return)\b
+      scope: keyword.control.zenc
+    # Memory management
+    - match: \b(defer|autofree|move)\b
+      scope: keyword.other.memory.zenc
+    # Async
+    - match: \b(async|await)\b
+      scope: keyword.control.async.zenc
+    # Other
+    - match: \b(where|as|in|is)\b
+      scope: keyword.other.zenc
+    # FFI
+    - match: \b(extern|asm)\b
+      scope: keyword.other.ffi.zenc
+    # Boolean literals
+    - match: \b(true|false)\b
+      scope: constant.language.boolean.zenc
+    # Null
+    - match: \b(null|undefined)\b
+      scope: constant.language.null.zenc
+    # Self
+    - match: \b(self|Self)\b
+      scope: variable.language.zenc
+
+  types:
+    # Primitive integer types
+    - match: \b(i8|i16|i32|i64|i128|u8|u16|u32|u64|u128|isize|usize)\b
+      scope: storage.type.primitive.zenc
+    # Floating point types
+    - match: \b(f32|f64)\b
+      scope: storage.type.primitive.zenc
+    # Other primitive types
+    - match: \b(bool|char|string|void)\b
+      scope: storage.type.primitive.zenc
+    # C interop types
+    - match: \b(c_char|c_short|c_int|c_long|c_longlong|c_uchar|c_ushort|c_uint|c_ulong|c_ulonglong|c_float|c_double|c_void)\b
+      scope: storage.type.c-interop.zenc
+    # Type names (capitalized identifiers)
+    - match: \b([A-Z][a-zA-Z0-9_]*)\b
+      scope: storage.type.zenc
+
+  functions:
+    # Function definitions
+    - match: \b(fn)\s+({{ident}})
+      captures:
+        1: keyword.declaration.function.zenc
+        2: entity.name.function.zenc
+    # Function calls
+    - match: ({{ident}})(\()
+      captures:
+        1: variable.function.zenc
+        2: punctuation.section.arguments.begin.zenc
+
+  literals:
+    # Strings with interpolation
+    - match: '"'
+      scope: punctuation.definition.string.begin.zenc
+      push:
+        - meta_scope: string.quoted.double.zenc
+        - match: '"'
+          scope: punctuation.definition.string.end.zenc
+          pop: true
+        - match: '\\.'
+          scope: constant.character.escape.zenc
+        - match: '\{'
+          scope: punctuation.section.interpolation.begin.zenc
+          push:
+            - clear_scopes: 1
+            - meta_scope: meta.interpolation.zenc
+            - meta_content_scope: source.zenc.embedded
+            - match: '\}'
+              scope: punctuation.section.interpolation.end.zenc
+              pop: true
+            - include: main
+    # Character literals
+    - match: "'"
+      scope: punctuation.definition.string.begin.zenc
+      push:
+        - meta_scope: string.quoted.single.zenc
+        - match: "'"
+          scope: punctuation.definition.string.end.zenc
+          pop: true
+        - match: '\\.'
+          scope: constant.character.escape.zenc
+    # Hex numbers
+    - match: \b(0x[0-9a-fA-F_]+){{int_suffix}}\b
+      scope: constant.numeric.hex.zenc
+    # Binary numbers
+    - match: \b(0b[01_]+){{int_suffix}}\b
+      scope: constant.numeric.binary.zenc
+    # Octal numbers
+    - match: \b(0o[0-7_]+){{int_suffix}}\b
+      scope: constant.numeric.octal.zenc
+    # Floating point numbers
+    - match: \b([0-9][0-9_]*\.[0-9][0-9_]*){{float_suffix}}\b
+      scope: constant.numeric.float.zenc
+    - match: \b([0-9][0-9_]*[eE][+-]?[0-9_]+){{float_suffix}}\b
+      scope: constant.numeric.float.zenc
+    # Integer numbers
+    - match: \b([0-9][0-9_]*){{int_suffix}}\b
+      scope: constant.numeric.integer.zenc
+
+  operators:
+    # Arrow operators
+    - match: '->'
+      scope: punctuation.separator.arrow.zenc
+    - match: '=>'
+      scope: punctuation.separator.fat-arrow.zenc
+    # Range operators
+    - match: '\.\.='
+      scope: keyword.operator.range.inclusive.zenc
+    - match: '\.\.'
+      scope: keyword.operator.range.zenc
+    # Comparison operators
+    - match: '==|!=|<=|>=|<|>'
+      scope: keyword.operator.comparison.zenc
+    # Logical operators
+    - match: '&&|\|\||!'
+      scope: keyword.operator.logical.zenc
+    # Assignment operators
+    - match: '\+=|-=|\*=|/=|%=|&=|\|=|\^=|<<=|>>='
+      scope: keyword.operator.assignment.compound.zenc
+    - match: '='
+      scope: keyword.operator.assignment.zenc
+    # Arithmetic operators
+    - match: '\+|-|\*|/|%'
+      scope: keyword.operator.arithmetic.zenc
+    # Bitwise operators
+    - match: '&|\||\^|~|<<|>>'
+      scope: keyword.operator.bitwise.zenc
+    # Member access
+    - match: '\.'
+      scope: punctuation.accessor.zenc
+    # Scope resolution
+    - match: '::'
+      scope: punctuation.accessor.double-colon.zenc
+
+  punctuation:
+    - match: '\('
+      scope: punctuation.section.parens.begin.zenc
+    - match: '\)'
+      scope: punctuation.section.parens.end.zenc
+    - match: '\['
+      scope: punctuation.section.brackets.begin.zenc
+    - match: '\]'
+      scope: punctuation.section.brackets.end.zenc
+    - match: '\{'
+      scope: punctuation.section.braces.begin.zenc
+    - match: '\}'
+      scope: punctuation.section.braces.end.zenc
+    - match: ','
+      scope: punctuation.separator.comma.zenc
+    - match: ';'
+      scope: punctuation.terminator.zenc
+    - match: ':'
+      scope: punctuation.separator.colon.zenc

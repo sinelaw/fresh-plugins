@@ -1,0 +1,4 @@
+plugins/lib/
+.expert/
+examples/*/.expert/
+examples/*/_build/
