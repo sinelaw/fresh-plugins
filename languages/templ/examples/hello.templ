@@ -1,0 +1,33 @@
+package main
+
+// A simple hello component to test templ LSP support.
+templ Hello(name string) {
+	<div class="greeting">
+		<h1>Hello, { name }!</h1>
+		<p>Welcome to the templ template language.</p>
+	</div>
+}
+
+// Page layout component
+templ Page(title string) {
+	<!DOCTYPE html>
+	<html lang="en">
+		<head>
+			<meta charset="UTF-8"/>
+			<title>{ title }</title>
+		</head>
+		<body>
+			{ children... }
+		</body>
+	</html>
+}
+
+// Example using nested components
+templ HomePage() {
+	@Page("Home") {
+		@Hello("Fresh Editor")
+		<footer>
+			<p>Built with templ</p>
+		</footer>
+	}
+}

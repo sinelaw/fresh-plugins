@@ -1,0 +1,419 @@
+%YAML 1.2
+---
+# Templ syntax highlighting for Fresh editor
+# https://templ.guide/
+name: Templ
+scope: source.templ
+version: 2
+
+file_extensions:
+  - templ
+
+variables:
+  ident: '[a-zA-Z_][a-zA-Z0-9_]*'
+
+contexts:
+  prototype:
+    - include: comments
+
+  main:
+    - include: package-declaration
+    - include: import-declaration
+    - include: templ-declaration
+    - include: func-declaration
+    - include: type-declaration
+    - include: var-declaration
+    - include: const-declaration
+
+  comments:
+    - match: '//'
+      scope: punctuation.definition.comment.templ
+      push:
+        - meta_scope: comment.line.double-slash.templ
+        - match: $\n?
+          pop: true
+    - match: '/\*'
+      scope: punctuation.definition.comment.begin.templ
+      push:
+        - meta_scope: comment.block.templ
+        - match: '\*/'
+          scope: punctuation.definition.comment.end.templ
+          pop: true
+
+  package-declaration:
+    - match: \b(package)\s+({{ident}})
+      captures:
+        1: keyword.other.package.templ
+        2: entity.name.namespace.templ
+
+  import-declaration:
+    - match: \b(import)\b
+      scope: keyword.other.import.templ
+      push:
+        - match: \(
+          scope: punctuation.section.parens.begin.templ
+          set:
+            - match: \)
+              scope: punctuation.section.parens.end.templ
+              pop: true
+            - include: import-spec
+        - include: import-spec
+        - match: (?=\S)
+          pop: true
+
+  import-spec:
+    - match: ({{ident}})?\s*(".*?")
+      captures:
+        1: entity.name.import.templ
+        2: string.quoted.double.templ
+
+  templ-declaration:
+    - match: \b(templ)\s+({{ident}})
+      captures:
+        1: keyword.declaration.templ.templ
+        2: entity.name.function.templ
+      push:
+        - match: \(
+          scope: punctuation.section.parens.begin.templ
+          push:
+            - match: \)
+              scope: punctuation.section.parens.end.templ
+              pop: true
+            - include: parameters
+        - match: \{
+          scope: punctuation.section.block.begin.templ
+          set: templ-body
+        - match: (?=\S)
+          pop: true
+
+  templ-body:
+    - meta_scope: meta.block.templ
+    - match: \}
+      scope: punctuation.section.block.end.templ
+      pop: true
+    - include: templ-content
+
+  templ-content:
+    - include: comments
+    - include: templ-component-call
+    - include: templ-expression
+    - include: templ-control-flow
+    - include: html-tag
+    - include: html-doctype
+    - include: html-text
+
+  templ-component-call:
+    - match: '(@)({{ident}}(?:\.{{ident}})*)'
+      captures:
+        1: punctuation.definition.component.templ
+        2: variable.function.component.templ
+      push:
+        - match: \(
+          scope: punctuation.section.arguments.begin.templ
+          push:
+            - match: \)
+              scope: punctuation.section.arguments.end.templ
+              pop: true
+            - include: go-expressions
+        - match: \{
+          scope: punctuation.section.block.begin.templ
+          set:
+            - meta_scope: meta.component-children.templ
+            - match: \}
+              scope: punctuation.section.block.end.templ
+              pop: true
+            - include: templ-content
+        - match: (?=\S)
+          pop: true
+
+  templ-expression:
+    - match: '\{'
+      scope: punctuation.section.interpolation.begin.templ
+      push:
+        - meta_scope: meta.interpolation.templ
+        - match: '\}'
+          scope: punctuation.section.interpolation.end.templ
+          pop: true
+        - include: go-expressions
+
+  templ-control-flow:
+    - match: \b(if)\b
+      scope: keyword.control.conditional.templ
+      push:
+        - include: go-expressions
+        - match: \{
+          scope: punctuation.section.block.begin.templ
+          set:
+            - match: \}
+              scope: punctuation.section.block.end.templ
+              pop: true
+            - include: templ-content
+        - match: (?=\S)
+          pop: true
+    - match: \b(else)\b
+      scope: keyword.control.conditional.templ
+    - match: \b(for)\b
+      scope: keyword.control.loop.templ
+      push:
+        - include: go-expressions
+        - match: \{
+          scope: punctuation.section.block.begin.templ
+          set:
+            - match: \}
+              scope: punctuation.section.block.end.templ
+              pop: true
+            - include: templ-content
+        - match: (?=\S)
+          pop: true
+    - match: \b(switch)\b
+      scope: keyword.control.switch.templ
+      push:
+        - include: go-expressions
+        - match: \{
+          scope: punctuation.section.block.begin.templ
+          set:
+            - match: \}
+              scope: punctuation.section.block.end.templ
+              pop: true
+            - include: templ-case
+        - match: (?=\S)
+          pop: true
+
+  templ-case:
+    - match: \b(case)\b
+      scope: keyword.control.case.templ
+      push:
+        - include: go-expressions
+        - match: ':'
+          scope: punctuation.separator.templ
+          pop: true
+    - match: \b(default)\b
+      scope: keyword.control.default.templ
+      push:
+        - match: ':'
+          scope: punctuation.separator.templ
+          pop: true
+    - include: templ-content
+
+  html-doctype:
+    - match: '(<!)(DOCTYPE)\s+(html)(>)'
+      captures:
+        1: punctuation.definition.tag.begin.html
+        2: entity.name.tag.doctype.html
+        3: variable.documentroot.html
+        4: punctuation.definition.tag.end.html
+
+  html-tag:
+    - match: '(<)({{ident}}(?::{{ident}})?)'
+      captures:
+        1: punctuation.definition.tag.begin.html
+        2: entity.name.tag.html
+      push:
+        - meta_scope: meta.tag.html
+        - match: '/>'
+          scope: punctuation.definition.tag.end.html
+          pop: true
+        - match: '>'
+          scope: punctuation.definition.tag.end.html
+          pop: true
+        - include: html-attributes
+    - match: '(</)({{ident}}(?::{{ident}})?)(>)'
+      captures:
+        1: punctuation.definition.tag.begin.html
+        2: entity.name.tag.html
+        3: punctuation.definition.tag.end.html
+
+  html-attributes:
+    - match: '({{ident}}(?:-{{ident}})*)\s*(=)\s*'
+      captures:
+        1: entity.other.attribute-name.html
+        2: punctuation.separator.key-value.html
+      push:
+        - match: '"'
+          scope: punctuation.definition.string.begin.html
+          set:
+            - meta_scope: string.quoted.double.html
+            - match: '"'
+              scope: punctuation.definition.string.end.html
+              pop: true
+            - include: templ-expression
+        - match: '\{'
+          scope: punctuation.section.interpolation.begin.templ
+          set:
+            - meta_scope: meta.interpolation.templ
+            - match: '\}'
+              scope: punctuation.section.interpolation.end.templ
+              pop: true
+            - include: go-expressions
+        - match: (?=\S)
+          pop: true
+    - match: '({{ident}}(?:-{{ident}})*)'
+      captures:
+        1: entity.other.attribute-name.html
+    - match: '\{'
+      scope: punctuation.section.interpolation.begin.templ
+      push:
+        - meta_scope: meta.interpolation.templ
+        - match: '\}'
+          scope: punctuation.section.interpolation.end.templ
+          pop: true
+        - include: go-expressions
+
+  html-text:
+    - match: '[^<{@}]+'
+      scope: text.html
+
+  func-declaration:
+    - match: \b(func)\s+({{ident}})
+      captures:
+        1: keyword.declaration.function.go
+        2: entity.name.function.go
+      push:
+        - match: \{
+          scope: punctuation.section.block.begin.go
+          set: go-block
+        - match: (?=\n)
+          pop: true
+        - include: parameters
+        - include: go-types
+
+  type-declaration:
+    - match: \b(type)\s+({{ident}})
+      captures:
+        1: keyword.declaration.type.go
+        2: entity.name.type.go
+
+  var-declaration:
+    - match: \b(var)\b
+      scope: keyword.declaration.var.go
+
+  const-declaration:
+    - match: \b(const)\b
+      scope: keyword.declaration.const.go
+
+  parameters:
+    - match: ({{ident}})\s+({{ident}})
+      captures:
+        1: variable.parameter.templ
+        2: storage.type.templ
+    - match: ({{ident}})
+      captures:
+        1: storage.type.templ
+    - match: ','
+      scope: punctuation.separator.templ
+
+  go-block:
+    - match: \}
+      scope: punctuation.section.block.end.go
+      pop: true
+    - include: go-statements
+
+  go-statements:
+    - include: comments
+    - include: go-keywords
+    - include: go-types
+    - include: go-expressions
+
+  go-expressions:
+    - include: comments
+    - include: strings
+    - include: numbers
+    - include: go-keywords
+    - include: go-types
+    - include: go-operators
+    - include: go-function-call
+    - include: go-identifiers
+
+  go-keywords:
+    - match: \b(if|else|for|range|switch|case|default|return|break|continue|goto|fallthrough|defer|go|select|chan)\b
+      scope: keyword.control.go
+    - match: \b(func|struct|interface|map|type|var|const|package|import)\b
+      scope: keyword.declaration.go
+    - match: \b(true|false)\b
+      scope: constant.language.boolean.go
+    - match: \b(nil)\b
+      scope: constant.language.null.go
+    - match: \b(err|error)\b
+      scope: support.type.error.go
+
+  go-types:
+    - match: \b(bool|byte|complex64|complex128|error|float32|float64|int|int8|int16|int32|int64|rune|string|uint|uint8|uint16|uint32|uint64|uintptr)\b
+      scope: storage.type.go
+    - match: '\[\]'
+      scope: punctuation.definition.slice.go
+    - match: '\*'
+      scope: keyword.operator.pointer.go
+
+  go-operators:
+    - match: ':='
+      scope: keyword.operator.assignment.short.go
+    - match: '&&|\|\||!'
+      scope: keyword.operator.logical.go
+    - match: '==|!=|<=|>=|<|>'
+      scope: keyword.operator.comparison.go
+    - match: '='
+      scope: keyword.operator.assignment.go
+    - match: '\+|-|\*|/|%'
+      scope: keyword.operator.arithmetic.go
+    - match: '&|\||\^|<<|>>'
+      scope: keyword.operator.bitwise.go
+    - match: '\.'
+      scope: punctuation.accessor.go
+    - match: ','
+      scope: punctuation.separator.go
+    - match: ':'
+      scope: punctuation.separator.go
+
+  go-function-call:
+    - match: '({{ident}})\s*(\()'
+      captures:
+        1: variable.function.go
+        2: punctuation.section.arguments.begin.go
+      push:
+        - match: '\)'
+          scope: punctuation.section.arguments.end.go
+          pop: true
+        - include: go-expressions
+
+  go-identifiers:
+    - match: '{{ident}}'
+      scope: variable.other.go
+
+  strings:
+    - match: '"'
+      scope: punctuation.definition.string.begin.go
+      push:
+        - meta_scope: string.quoted.double.go
+        - match: '"'
+          scope: punctuation.definition.string.end.go
+          pop: true
+        - match: '\\.'
+          scope: constant.character.escape.go
+    - match: '`'
+      scope: punctuation.definition.string.begin.go
+      push:
+        - meta_scope: string.quoted.raw.go
+        - match: '`'
+          scope: punctuation.definition.string.end.go
+          pop: true
+    - match: "'"
+      scope: punctuation.definition.string.begin.go
+      push:
+        - meta_scope: string.quoted.single.go
+        - match: "'"
+          scope: punctuation.definition.string.end.go
+          pop: true
+        - match: '\\.'
+          scope: constant.character.escape.go
+
+  numbers:
+    - match: \b(0x[0-9a-fA-F_]+)\b
+      scope: constant.numeric.hex.go
+    - match: \b(0b[01_]+)\b
+      scope: constant.numeric.binary.go
+    - match: \b(0o[0-7_]+)\b
+      scope: constant.numeric.octal.go
+    - match: \b([0-9]+\.[0-9]*|\.[0-9]+)([eE][+-]?[0-9]+)?\b
+      scope: constant.numeric.float.go
+    - match: \b([0-9]+)\b
+      scope: constant.numeric.integer.go
