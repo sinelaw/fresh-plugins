@@ -588,6 +588,30 @@ async function isInsideStyleTag(): Promise<boolean> {
 }
 
 /**
+ * Expand abbreviation using external emmet-expand.js script
+ */
+async function expandUsingCLI(abbr: string, type: 'html' | 'css'): Promise<string | null> {
+  // Get the directory where this plugin is located
+  // Note: __pluginDir__ is provided by the plugin runtime
+  const pluginDir = (globalThis as any).__pluginDir__ || "";
+  const scriptPath = editor.pathJoin(pluginDir, "emmet-expand.js");
+
+  try {
+    const result = await editor.spawnProcess("node", [scriptPath, abbr, type], pluginDir);
+
+    if (result.exit_code === 0) {
+      return result.stdout.trim();
+    } else {
+      editor.debug(`[emmet] Expansion failed: ${result.stderr}`);
+      return null;
+    }
+  } catch (e) {
+    editor.debug(`[emmet] Failed to spawn node: ${e}`);
+    return null;
+  }
+}
+
+/**
  * Expand Emmet abbreviation at cursor
  */
 async function expandAbbreviation(): Promise<boolean> {
@@ -611,28 +635,23 @@ async function expandAbbreviation(): Promise<boolean> {
   const insideStyleTag = !isCSSFile && await isInsideStyleTag();
 
   const isCSSContext = isCSSFile || insideStyleTag;
+  const type = isCSSContext ? 'css' : 'html';
 
-  let expanded = "";
+  // Try expansion using CLI
+  let expanded = await expandUsingCLI(abbr, type);
 
-  if (isCSSContext) {
-    // Try CSS expansion
-    const rules = parseCSS(abbr);
-    if (rules.length > 0) {
-      expanded = renderCSS(rules);
-    }
-  } else {
-    // Try HTML expansion
-    const nodes = parseEmmet(abbr);
-    if (nodes.length > 0) {
-      expanded = renderHTML(nodes).trimEnd();
-    }
-  }
-
+  // Fallback to built-in parser if CLI fails
   if (!expanded) {
-    // Try CSS expansion as fallback even in HTML context
-    const rules = parseCSS(abbr);
-    if (rules.length > 0) {
-      expanded = renderCSS(rules);
+    if (isCSSContext) {
+      const rules = parseCSS(abbr);
+      if (rules.length > 0) {
+        expanded = renderCSS(rules);
+      }
+    } else {
+      const nodes = parseEmmet(abbr);
+      if (nodes.length > 0) {
+        expanded = renderHTML(nodes).trimEnd();
+      }
     }
   }
 

@@ -12,23 +12,35 @@ Emmet abbreviation expansion for HTML, CSS, JSX, and more - dramatically speed u
 
 ## Installation
 
+### Prerequisites
+
+This plugin requires Node.js and the Emmet expansion library:
+
+```bash
+npm install -g @emmetio/expand-abbreviation
+```
+
 ### Via Package Manager
 
-1. Open Fresh
-2. Press `Ctrl+P` to open command palette
-3. Search for `pkg: Install from URL`
-4. Enter: `https://github.com/sinelaw/fresh-plugins#emmet`
-5. Restart Fresh
+1. Install the prerequisite (see above)
+2. Open Fresh
+3. Press `Ctrl+P` to open command palette
+4. Search for `pkg: Install from URL`
+5. Enter: `https://github.com/sinelaw/fresh-plugins#emmet`
+6. Restart Fresh
 
 ### Manual Installation
 
+1. Install the prerequisite (see above)
+2. Install the plugin:
+
 ```bash
-cd ~/.config/fresh/plugins/packages
+cd ~/.config/fresh/bundles/packages
 git clone https://github.com/sinelaw/fresh-plugins
 ln -s fresh-plugins/emmet emmet
 ```
 
-Then restart Fresh.
+3. Restart Fresh
 
 ## Usage
 
