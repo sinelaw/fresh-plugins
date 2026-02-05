@@ -319,7 +319,7 @@ let dependenciesOk = false;
  * Check if Emmet dependencies are installed
  * Returns true if dependencies are OK, false otherwise
  */
-async function checkDependencies(): Promise<boolean> {
+async function checkDependencies(showPopup = true): Promise<boolean> {
   if (dependenciesChecked) {
     return dependenciesOk;
   }
@@ -330,7 +330,7 @@ async function checkDependencies(): Promise<boolean> {
     // Check if node is available
     const nodeCheck = await editor.spawnProcess("node", ["--version"]);
     if (nodeCheck.exit_code !== 0) {
-      showInstallPopup("Node.js not found");
+      if (showPopup) showInstallPopup("Node.js not found");
       dependenciesOk = false;
       return false;
     }
@@ -344,7 +344,7 @@ async function checkDependencies(): Promise<boolean> {
     );
 
     if (npmCheck.exit_code !== 0) {
-      showInstallPopup("Emmet library not found");
+      if (showPopup) showInstallPopup("Emmet library not found");
       dependenciesOk = false;
       return false;
     }
@@ -354,7 +354,7 @@ async function checkDependencies(): Promise<boolean> {
     return true;
   } catch (e) {
     editor.debug(`[emmet] Dependency check failed: ${e}`);
-    showInstallPopup("Dependency check failed");
+    if (showPopup) showInstallPopup("Dependency check failed");
     dependenciesOk = false;
     return false;
   }
@@ -387,12 +387,19 @@ globalThis.emmet_on_install_action = function (data: any): void {
     case "auto_install":
       const pluginDir = editor.getPluginDir();
       editor.setStatus("Installing @emmetio/expand-abbreviation...");
-      editor.spawnProcess("npm", ["install", "@emmetio/expand-abbreviation"], pluginDir).then((result) => {
+      editor.spawnProcess("npm", ["install", "@emmetio/expand-abbreviation"], pluginDir).then(async (result) => {
         if (result.exit_code === 0) {
-          editor.setStatus("Emmet library installed successfully! Try expanding again.");
-          // Reset dependency check so it will succeed on next expansion
+          // Reset dependency check and verify installation
           dependenciesChecked = false;
           dependenciesOk = false;
+
+          const depsOk = await checkDependencies(false);
+          if (depsOk) {
+            editor.setStatus("Emmet library installed successfully! Try expanding again.");
+          } else {
+            editor.setStatus("Installation completed but library not found. Try restarting Fresh.");
+            editor.debug(`[emmet] Installation succeeded but dependency check failed`);
+          }
         } else {
           editor.setStatus(`Installation failed: ${result.stderr}`);
           editor.debug(`[emmet] Installation stderr: ${result.stderr}`);
