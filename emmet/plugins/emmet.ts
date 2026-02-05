@@ -635,6 +635,22 @@ async function expandAbbreviation(): Promise<boolean> {
     return false;
   }
 
+  // Get current line's indentation to preserve it for multi-line expansions
+  const lineNum = editor.getCursorLine();
+  const lineStart = await editor.getLineStartPosition(lineNum);
+  if (lineStart !== null) {
+    const cursorPos = editor.getCursorPosition();
+    const linePrefix = await editor.getBufferText(bufferId, lineStart, cursorPos - abbr.length);
+    const indentMatch = linePrefix.match(/^(\s*)/);
+    const indent = indentMatch ? indentMatch[1] : "";
+
+    // Apply indentation to all lines except the first
+    if (indent && expanded.includes("\n")) {
+      const lines = expanded.split("\n");
+      expanded = lines.map((line, i) => (i === 0 ? line : indent + line)).join("\n");
+    }
+  }
+
   // Delete the abbreviation
   const cursorPos = editor.getCursorPosition();
   const startPos = cursorPos - abbr.length;
