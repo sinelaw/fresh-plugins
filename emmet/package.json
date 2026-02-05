@@ -7,11 +7,23 @@
   "author": "Fresh Editor Team",
   "license": "MIT",
   "repository": "https://github.com/sinelaw/fresh-plugins",
-  "keywords": ["emmet", "html", "css", "abbreviation", "expansion", "productivity"],
+  "keywords": [
+    "emmet",
+    "html",
+    "css",
+    "abbreviation",
+    "expansion",
+    "productivity"
+  ],
   "fresh": {
     "min_version": "0.1.0",
     "plugins": [
-      { "entry": "plugins/emmet.ts" }
+      {
+        "entry": "plugins/emmet.ts"
+      }
     ]
+  },
+  "dependencies": {
+    "@emmetio/expand-abbreviation": "^0.7.3"
   }
 }
