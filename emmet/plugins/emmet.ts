@@ -701,14 +701,14 @@ editor.registerCommand(
   "emmet_expand_abbreviation",
   "Emmet: Expand Abbreviation",
   "emmet_expand_abbreviation",
-  "normal"
+  null
 );
 
 editor.registerCommand(
   "emmet_expand_from_prompt",
   "Emmet: Expand Abbreviation from Prompt",
   "emmet_expand_from_prompt",
-  "normal"
+  null
 );
 
 // Note: To bind Tab key, users should add to their keybindings.json:
