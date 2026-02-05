@@ -91,7 +91,9 @@ async function isInsideStyleTag(): Promise<boolean> {
   const styleCloseMatch = text.lastIndexOf("</style>");
 
   // If we found a <style> tag and no closing tag after it, we're inside
-  return styleOpenMatch !== -1 && styleOpenMatch > styleCloseMatch;
+  const result = styleOpenMatch !== -1 && styleOpenMatch > styleCloseMatch;
+  editor.debug(`[emmet] isInsideStyleTag: styleOpen=${styleOpenMatch}, styleClose=${styleCloseMatch}, result=${result}`);
+  return result;
 }
 
 /**
@@ -148,6 +150,8 @@ async function expandAbbreviation(): Promise<boolean> {
 
   const isCSSContext = isCSSFile || insideStyleTag;
   const type = isCSSContext ? 'css' : 'html';
+
+  editor.debug(`[emmet] Expanding '${abbr}': isCSSFile=${isCSSFile}, insideStyleTag=${insideStyleTag}, type=${type}`);
 
   // Expand using CLI
   let expanded = await expandUsingCLI(abbr, type);
