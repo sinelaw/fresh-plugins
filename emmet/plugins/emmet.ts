@@ -126,6 +126,11 @@ async function expandAbbreviation(): Promise<boolean> {
     return false;
   }
 
+  // Check dependencies on first use
+  if (!(await checkDependencies())) {
+    return false;
+  }
+
   const abbr = await getAbbreviationBeforeCursor();
   if (!abbr) {
     return false;
@@ -306,16 +311,28 @@ editor.on("after_file_open", "emmet_on_after_file_open");
 // Activate for current buffer on load
 activateEmmetModeForBuffer();
 
+// Track if dependencies have been checked
+let dependenciesChecked = false;
+let dependenciesOk = false;
+
 /**
  * Check if Emmet dependencies are installed
+ * Returns true if dependencies are OK, false otherwise
  */
-async function checkDependencies(): Promise<void> {
+async function checkDependencies(): Promise<boolean> {
+  if (dependenciesChecked) {
+    return dependenciesOk;
+  }
+
+  dependenciesChecked = true;
+
   try {
     // Check if node is available
     const nodeCheck = await editor.spawnProcess("node", ["--version"]);
     if (nodeCheck.exit_code !== 0) {
       showInstallPopup("Node.js not found");
-      return;
+      dependenciesOk = false;
+      return false;
     }
 
     // Check if @emmetio/expand-abbreviation is installed locally in plugin dir
@@ -328,13 +345,18 @@ async function checkDependencies(): Promise<void> {
 
     if (npmCheck.exit_code !== 0) {
       showInstallPopup("Emmet library not found");
-      return;
+      dependenciesOk = false;
+      return false;
     }
 
     editor.debug("[emmet] Dependencies check passed");
+    dependenciesOk = true;
+    return true;
   } catch (e) {
     editor.debug(`[emmet] Dependency check failed: ${e}`);
     showInstallPopup("Dependency check failed");
+    dependenciesOk = false;
+    return false;
   }
 }
 
@@ -367,7 +389,10 @@ globalThis.emmet_on_install_action = function (data: any): void {
       editor.setStatus("Installing @emmetio/expand-abbreviation...");
       editor.spawnProcess("npm", ["install", "@emmetio/expand-abbreviation"], pluginDir).then((result) => {
         if (result.exit_code === 0) {
-          editor.setStatus("Emmet library installed successfully! Please restart Fresh.");
+          editor.setStatus("Emmet library installed successfully! Try expanding again.");
+          // Reset dependency check so it will succeed on next expansion
+          dependenciesChecked = false;
+          dependenciesOk = false;
         } else {
           editor.setStatus(`Installation failed: ${result.stderr}`);
           editor.debug(`[emmet] Installation stderr: ${result.stderr}`);
@@ -385,9 +410,6 @@ globalThis.emmet_on_install_action = function (data: any): void {
 };
 
 editor.on("action_popup_result", "emmet_on_install_action");
-
-// Check dependencies on startup
-checkDependencies();
 
 editor.debug("Emmet plugin loaded with HTML/CSS Tab bindings");
 editor.setStatus(editor.t("status.loaded"));
