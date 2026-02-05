@@ -711,21 +711,62 @@ editor.registerCommand(
   null
 );
 
-// Define HTML mode with Tab key bound to Emmet expansion
-// This extends the normal mode and adds Tab -> Emmet
-editor.defineMode("html", null, [
+// Define emmet-html mode with Tab key bound to Emmet expansion
+editor.defineMode("emmet-html", null, [
   ["Tab", "emmet_expand_or_pass"],
 ], false); // read_only = false to allow typing
 
-// Define CSS mode with Tab key bound to Emmet expansion
-editor.defineMode("css", null, [
+// Define emmet-css mode with Tab key bound to Emmet expansion
+editor.defineMode("emmet-css", null, [
   ["Tab", "emmet_expand_or_pass"],
 ], false);
 
-// Define SCSS mode with Tab key bound to Emmet expansion
-editor.defineMode("scss", null, [
-  ["Tab", "emmet_expand_or_pass"],
-], false);
+/**
+ * Activate appropriate Emmet mode based on file extension
+ */
+function activateEmmetModeForBuffer(): void {
+  const bufferId = editor.getActiveBufferId();
+  if (!bufferId) return;
+
+  const path = editor.getBufferPath(bufferId);
+  if (!path) return;
+
+  const ext = editor.pathExtname(path).toLowerCase();
+
+  // HTML and related formats
+  if (ext === ".html" || ext === ".htm" || ext === ".xml" || ext === ".svg" ||
+      ext === ".vue" || ext === ".jsx" || ext === ".tsx") {
+    editor.setEditorMode("emmet-html");
+    editor.debug(`[emmet] Activated emmet-html mode for ${ext} file`);
+  }
+  // CSS and related formats
+  else if (ext === ".css" || ext === ".scss" || ext === ".sass" || ext === ".less") {
+    editor.setEditorMode("emmet-css");
+    editor.debug(`[emmet] Activated emmet-css mode for ${ext} file`);
+  }
+  // For other files, don't activate Emmet mode (will use default mode)
+}
+
+/**
+ * Handler for buffer_activated event
+ */
+(globalThis as any).emmet_on_buffer_activated = function(): void {
+  activateEmmetModeForBuffer();
+};
+
+/**
+ * Handler for after_file_open event
+ */
+(globalThis as any).emmet_on_after_file_open = function(): void {
+  activateEmmetModeForBuffer();
+};
+
+// Register event handlers
+editor.on("buffer_activated", "emmet_on_buffer_activated");
+editor.on("after_file_open", "emmet_on_after_file_open");
+
+// Activate for current buffer on load
+activateEmmetModeForBuffer();
 
 editor.debug("Emmet plugin loaded with HTML/CSS Tab bindings");
 editor.setStatus(editor.t("status.loaded"));
