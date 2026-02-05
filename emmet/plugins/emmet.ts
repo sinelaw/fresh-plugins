@@ -320,9 +320,13 @@ async function checkDependencies(): Promise<void> {
 
     // Check if @emmetio/expand-abbreviation is installed locally in plugin dir
     const pluginDir = editor.getPluginDir();
-    const nodeModulesPath = editor.pathJoin(pluginDir, "node_modules", "@emmetio", "expand-abbreviation");
+    const npmCheck = await editor.spawnProcess(
+      "node",
+      ["-e", "require('@emmetio/expand-abbreviation')"],
+      pluginDir
+    );
 
-    if (!editor.fileExists(nodeModulesPath)) {
+    if (npmCheck.exit_code !== 0) {
       showInstallPopup("Emmet library not found");
       return;
     }
