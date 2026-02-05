@@ -144,11 +144,16 @@ function parseTokens(tokens: string[]): EmmetNode[] {
         children.push(parseElement(tokens[i]));
         i++;
 
+        // After parsing a child element, check if there's a multiplier
+        if (i < tokens.length && tokens[i] === "*") {
+          continue; // Stay in loop to process the multiplication
+        }
+
+        // Check if we should continue nesting deeper
         if (i < tokens.length && tokens[i] === ">") {
-          // Continue nesting deeper
-          continue;
+          continue; // Stay in loop for deeper nesting
         } else {
-          break;
+          break; // End of children
         }
       }
 
