@@ -32,16 +32,24 @@ Then restart Fresh.
 
 ## Usage
 
-### Command Palette
+### Method 1: Expand from Prompt (Easiest!)
 
-1. Type an Emmet abbreviation
+1. Open command palette (`Ctrl+P`)
+2. Run `Emmet: Expand Abbreviation from Prompt`
+3. Type your abbreviation (e.g., `ul>li*3`)
+4. Press Enter to expand and insert
+
+### Method 2: Expand in Buffer
+
+1. Type an Emmet abbreviation in your file
 2. Open command palette (`Ctrl+P`)
 3. Run `Emmet: Expand Abbreviation`
 
-### Keyboard Shortcut (Recommended)
+### Method 3: Keyboard Shortcuts (Recommended)
 
 Add to your `~/.claude/keybindings.json`:
 
+**Tab key for in-buffer expansion:**
 ```json
 {
   "key": "Tab",
@@ -50,15 +58,16 @@ Add to your `~/.claude/keybindings.json`:
 }
 ```
 
-Or bind to any other key:
-
+**Ctrl+E for prompt-based expansion:**
 ```json
 {
   "key": "Ctrl+e",
-  "command": "emmet_expand_abbreviation",
+  "command": "emmet_expand_from_prompt",
   "when": "mode == 'normal'"
 }
 ```
+
+Or bind to any keys you prefer!
 
 ## Examples
 

@@ -646,11 +646,68 @@ globalThis.emmet_expand_or_pass = async function (): Promise<void> {
   }
 };
 
+/**
+ * Command handler for prompt-based expansion
+ * Opens a prompt asking for abbreviation, then expands and inserts it
+ */
+globalThis.emmet_expand_from_prompt = async function (): Promise<void> {
+  const abbr = await editor.prompt("Emmet abbreviation:", "");
+
+  if (!abbr) {
+    return; // User cancelled
+  }
+
+  // Determine context
+  const bufferId = editor.getActiveBufferId();
+  const path = bufferId ? editor.getBufferPath(bufferId) : "";
+  const ext = path ? editor.pathExtname(path).toLowerCase() : "";
+  const isCSSContext =
+    ext === ".css" || ext === ".scss" || ext === ".sass" || ext === ".less";
+
+  let expanded = "";
+
+  if (isCSSContext) {
+    // Try CSS expansion
+    const rules = parseCSS(abbr);
+    if (rules.length > 0) {
+      expanded = renderCSS(rules);
+    }
+  } else {
+    // Try HTML expansion
+    const nodes = parseEmmet(abbr);
+    if (nodes.length > 0) {
+      expanded = renderHTML(nodes).trimEnd();
+    }
+  }
+
+  if (!expanded) {
+    // Try CSS expansion as fallback
+    const rules = parseCSS(abbr);
+    if (rules.length > 0) {
+      expanded = renderCSS(rules);
+    }
+  }
+
+  if (expanded) {
+    editor.insertAtCursor(expanded);
+    editor.setStatus(`Emmet: Expanded "${abbr}"`);
+  } else {
+    editor.setStatus(`Emmet: Could not expand "${abbr}"`);
+  }
+};
+
 // Register commands
 editor.registerCommand(
   "emmet_expand_abbreviation",
   "Emmet: Expand Abbreviation",
   "emmet_expand_abbreviation",
+  "normal"
+);
+
+editor.registerCommand(
+  "emmet_expand_from_prompt",
+  "Emmet: Expand Abbreviation from Prompt",
+  "emmet_expand_from_prompt",
   "normal"
 );
 
