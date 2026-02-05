@@ -711,12 +711,21 @@ editor.registerCommand(
   null
 );
 
-// Note: To bind Tab key, users should add to their keybindings.json:
-// {
-//   "key": "Tab",
-//   "command": "emmet_expand_abbreviation",
-//   "when": "mode == 'insert'"
-// }
+// Define HTML mode with Tab key bound to Emmet expansion
+// This extends the normal mode and adds Tab -> Emmet
+editor.defineMode("html", null, [
+  ["Tab", "emmet_expand_or_pass"],
+], false); // read_only = false to allow typing
 
-editor.debug("Emmet plugin loaded");
+// Define CSS mode with Tab key bound to Emmet expansion
+editor.defineMode("css", null, [
+  ["Tab", "emmet_expand_or_pass"],
+], false);
+
+// Define SCSS mode with Tab key bound to Emmet expansion
+editor.defineMode("scss", null, [
+  ["Tab", "emmet_expand_or_pass"],
+], false);
+
+editor.debug("Emmet plugin loaded with HTML/CSS Tab bindings");
 editor.setStatus(editor.t("status.loaded"));

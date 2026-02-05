@@ -4,7 +4,7 @@
     "cmd.expand_abbreviation_desc": "Expand Emmet abbreviation at cursor",
     "cmd.expand_from_prompt": "Emmet: Expand Abbreviation from Prompt",
     "cmd.expand_from_prompt_desc": "Enter abbreviation to expand and insert",
-    "status.loaded": "Emmet plugin ready",
+    "status.loaded": "Emmet ready (Tab to expand in HTML/CSS)",
     "status.expanded": "Emmet: Expanded \"%{abbr}\"",
     "status.no_abbreviation": "Emmet: No abbreviation to expand",
     "status.could_not_expand": "Emmet: Could not expand \"%{abbr}\""
@@ -14,7 +14,7 @@
     "cmd.expand_abbreviation_desc": "Expandir abreviatura Emmet en el cursor",
     "cmd.expand_from_prompt": "Emmet: Expandir Abreviatura desde Prompt",
     "cmd.expand_from_prompt_desc": "Ingresar abreviatura para expandir e insertar",
-    "status.loaded": "Plugin Emmet listo",
+    "status.loaded": "Emmet listo (Tab para expandir en HTML/CSS)",
     "status.expanded": "Emmet: Expandido \"%{abbr}\"",
     "status.no_abbreviation": "Emmet: No hay abreviatura para expandir",
     "status.could_not_expand": "Emmet: No se pudo expandir \"%{abbr}\""
@@ -24,7 +24,7 @@
     "cmd.expand_abbreviation_desc": "Étendre l'abréviation Emmet au curseur",
     "cmd.expand_from_prompt": "Emmet: Étendre l'abréviation depuis Prompt",
     "cmd.expand_from_prompt_desc": "Entrer l'abréviation à étendre et insérer",
-    "status.loaded": "Plugin Emmet prêt",
+    "status.loaded": "Emmet prêt (Tab pour étendre en HTML/CSS)",
     "status.expanded": "Emmet: Abréviation \"%{abbr}\" étendue",
     "status.no_abbreviation": "Emmet: Aucune abréviation à étendre",
     "status.could_not_expand": "Emmet: Impossible d'étendre \"%{abbr}\""
@@ -34,7 +34,7 @@
     "cmd.expand_abbreviation_desc": "Emmet-Abkürzung am Cursor erweitern",
     "cmd.expand_from_prompt": "Emmet: Abkürzung von Prompt erweitern",
     "cmd.expand_from_prompt_desc": "Abkürzung eingeben zum Erweitern und Einfügen",
-    "status.loaded": "Emmet-Plugin bereit",
+    "status.loaded": "Emmet bereit (Tab zum Erweitern in HTML/CSS)",
     "status.expanded": "Emmet: \"%{abbr}\" erweitert",
     "status.no_abbreviation": "Emmet: Keine Abkürzung zum Erweitern",
     "status.could_not_expand": "Emmet: \"%{abbr}\" konnte nicht erweitert werden"
@@ -44,7 +44,7 @@
     "cmd.expand_abbreviation_desc": "在光标处展开Emmet缩写",
     "cmd.expand_from_prompt": "Emmet: 从提示展开缩写",
     "cmd.expand_from_prompt_desc": "输入要展开和插入的缩写",
-    "status.loaded": "Emmet插件已就绪",
+    "status.loaded": "Emmet已就绪 (HTML/CSS中按Tab展开)",
     "status.expanded": "Emmet: 已展开 \"%{abbr}\"",
     "status.no_abbreviation": "Emmet: 没有要展开的缩写",
     "status.could_not_expand": "Emmet: 无法展开 \"%{abbr}\""
@@ -54,7 +54,7 @@
     "cmd.expand_abbreviation_desc": "カーソル位置でEmmet省略記法を展開",
     "cmd.expand_from_prompt": "Emmet: プロンプトから省略記法を展開",
     "cmd.expand_from_prompt_desc": "展開して挿入する省略記法を入力",
-    "status.loaded": "Emmetプラグインが準備完了",
+    "status.loaded": "Emmet準備完了 (HTML/CSSでTabキーで展開)",
     "status.expanded": "Emmet: \"%{abbr}\" を展開しました",
     "status.no_abbreviation": "Emmet: 展開する省略記法がありません",
     "status.could_not_expand": "Emmet: \"%{abbr}\" を展開できませんでした"

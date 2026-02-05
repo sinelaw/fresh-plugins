@@ -32,42 +32,39 @@ Then restart Fresh.
 
 ## Usage
 
-### Method 1: Expand from Prompt (Easiest!)
+### Method 1: Tab Key (Automatic!)
+
+**The Tab key is automatically bound in HTML/CSS/SCSS files!**
+
+1. Open an HTML, CSS, or SCSS file
+2. Type an Emmet abbreviation (e.g., `div.container>ul>li*3`)
+3. Press **Tab** to expand
+4. If there's no abbreviation to expand, Tab inserts a normal tab character
+
+### Method 2: Expand from Prompt
 
 1. Open command palette (`Ctrl+P`)
 2. Run `Emmet: Expand Abbreviation from Prompt`
 3. Type your abbreviation (e.g., `ul>li*3`)
 4. Press Enter to expand and insert
 
-### Method 2: Expand in Buffer
+### Method 3: Expand in Buffer (Command Palette)
 
 1. Type an Emmet abbreviation in your file
 2. Open command palette (`Ctrl+P`)
 3. Run `Emmet: Expand Abbreviation`
 
-### Method 3: Keyboard Shortcuts (Recommended)
+### Optional: Custom Keyboard Shortcuts
 
-Add to your `~/.claude/keybindings.json`:
-
-**Tab key for in-buffer expansion:**
-```json
-{
-  "key": "Tab",
-  "command": "emmet_expand_abbreviation",
-  "when": "mode == 'insert'"
-}
-```
+You can also add custom keybindings to your `~/.claude/keybindings.json`:
 
 **Ctrl+E for prompt-based expansion:**
 ```json
 {
   "key": "Ctrl+e",
-  "command": "emmet_expand_from_prompt",
-  "when": "mode == 'normal'"
+  "command": "emmet_expand_from_prompt"
 }
 ```
-
-Or bind to any keys you prefer!
 
 ## Examples
 
