@@ -562,6 +562,27 @@ async function getAbbreviationBeforeCursor(): Promise<string | null> {
 }
 
 /**
+ * Check if cursor is inside a <style> tag
+ */
+async function isInsideStyleTag(): Promise<boolean> {
+  const bufferId = editor.getActiveBufferId();
+  if (bufferId === 0) return false;
+
+  const cursorPos = editor.getCursorPosition();
+
+  // Read up to 5000 bytes before cursor to look for <style> tag
+  const start = Math.max(0, cursorPos - 5000);
+  const text = await editor.getBufferText(bufferId, start, cursorPos);
+
+  // Look for last <style> tag before cursor
+  const styleOpenMatch = text.lastIndexOf("<style");
+  const styleCloseMatch = text.lastIndexOf("</style>");
+
+  // If we found a <style> tag and no closing tag after it, we're inside
+  return styleOpenMatch !== -1 && styleOpenMatch > styleCloseMatch;
+}
+
+/**
  * Expand Emmet abbreviation at cursor
  */
 async function expandAbbreviation(): Promise<boolean> {
@@ -578,8 +599,13 @@ async function expandAbbreviation(): Promise<boolean> {
   const bufferId = editor.getActiveBufferId();
   const path = editor.getBufferPath(bufferId);
   const ext = path ? editor.pathExtname(path).toLowerCase() : "";
-  const isCSSContext =
+  const isCSSFile =
     ext === ".css" || ext === ".scss" || ext === ".sass" || ext === ".less";
+
+  // Check if we're inside a <style> tag in an HTML file
+  const insideStyleTag = !isCSSFile && await isInsideStyleTag();
+
+  const isCSSContext = isCSSFile || insideStyleTag;
 
   let expanded = "";
 
