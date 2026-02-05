@@ -1,0 +1,17 @@
+{
+  "$schema": "https://raw.githubusercontent.com/sinelaw/fresh/main/crates/fresh-editor/plugins/schemas/package.schema.json",
+  "name": "emmet",
+  "version": "1.0.0",
+  "description": "Emmet abbreviation expansion for HTML, CSS, JSX, and more",
+  "type": "bundle",
+  "author": "Fresh Editor Team",
+  "license": "MIT",
+  "repository": "https://github.com/sinelaw/fresh-plugins",
+  "keywords": ["emmet", "html", "css", "abbreviation", "expansion", "productivity"],
+  "fresh": {
+    "min_version": "0.1.0",
+    "plugins": [
+      { "entry": "plugins/emmet.ts" }
+    ]
+  }
+}
