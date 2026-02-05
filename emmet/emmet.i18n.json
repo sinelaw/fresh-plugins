@@ -1,0 +1,38 @@
+{
+  "en": {
+    "status.loaded": "Emmet plugin ready",
+    "status.expanded": "Emmet: Expanded \"{abbr}\"",
+    "status.no_abbreviation": "Emmet: No abbreviation to expand",
+    "command.expand_abbreviation": "Emmet: Expand Abbreviation"
+  },
+  "es": {
+    "status.loaded": "Plugin Emmet listo",
+    "status.expanded": "Emmet: Expandido \"{abbr}\"",
+    "status.no_abbreviation": "Emmet: No hay abreviatura para expandir",
+    "command.expand_abbreviation": "Emmet: Expandir Abreviatura"
+  },
+  "fr": {
+    "status.loaded": "Plugin Emmet prêt",
+    "status.expanded": "Emmet: Abréviation \"{abbr}\" étendue",
+    "status.no_abbreviation": "Emmet: Aucune abréviation à étendre",
+    "command.expand_abbreviation": "Emmet: Étendre l'abréviation"
+  },
+  "de": {
+    "status.loaded": "Emmet-Plugin bereit",
+    "status.expanded": "Emmet: \"{abbr}\" erweitert",
+    "status.no_abbreviation": "Emmet: Keine Abkürzung zum Erweitern",
+    "command.expand_abbreviation": "Emmet: Abkürzung erweitern"
+  },
+  "zh": {
+    "status.loaded": "Emmet插件已就绪",
+    "status.expanded": "Emmet: 已展开 \"{abbr}\"",
+    "status.no_abbreviation": "Emmet: 没有要展开的缩写",
+    "command.expand_abbreviation": "Emmet: 展开缩写"
+  },
+  "ja": {
+    "status.loaded": "Emmetプラグインが準備完了",
+    "status.expanded": "Emmet: \"{abbr}\" を展開しました",
+    "status.no_abbreviation": "Emmet: 展開する省略記法がありません",
+    "command.expand_abbreviation": "Emmet: 省略記法を展開"
+  }
+}
