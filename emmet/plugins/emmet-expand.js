@@ -19,7 +19,7 @@ if (!abbr) {
 }
 
 try {
-  const expand = require('@emmetio/expand-abbreviation').default;
+  const { expand } = require('@emmetio/expand-abbreviation');
   const result = expand(abbr, { type });
   process.stdout.write(result);
 } catch (error) {
