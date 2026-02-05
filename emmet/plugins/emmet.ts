@@ -617,7 +617,7 @@ async function expandAbbreviation(): Promise<boolean> {
   // Insert expanded text
   editor.insertAtCursor(expanded);
 
-  editor.setStatus(`Emmet: Expanded "${abbr}"`);
+  editor.setStatus(editor.t("status.expanded", { abbr }));
   return true;
 }
 
@@ -631,7 +631,7 @@ async function expandAbbreviation(): Promise<boolean> {
 globalThis.emmet_expand_abbreviation = async function (): Promise<void> {
   const success = await expandAbbreviation();
   if (!success) {
-    editor.setStatus("Emmet: No abbreviation to expand");
+    editor.setStatus(editor.t("status.no_abbreviation"));
   }
 };
 
@@ -690,23 +690,23 @@ globalThis.emmet_expand_from_prompt = async function (): Promise<void> {
 
   if (expanded) {
     editor.insertAtCursor(expanded);
-    editor.setStatus(`Emmet: Expanded "${abbr}"`);
+    editor.setStatus(editor.t("status.expanded", { abbr }));
   } else {
-    editor.setStatus(`Emmet: Could not expand "${abbr}"`);
+    editor.setStatus(editor.t("status.could_not_expand", { abbr }));
   }
 };
 
 // Register commands
 editor.registerCommand(
-  "emmet_expand_abbreviation",
-  "Emmet: Expand Abbreviation",
+  "%cmd.expand_abbreviation",
+  "%cmd.expand_abbreviation_desc",
   "emmet_expand_abbreviation",
   null
 );
 
 editor.registerCommand(
-  "emmet_expand_from_prompt",
-  "Emmet: Expand Abbreviation from Prompt",
+  "%cmd.expand_from_prompt",
+  "%cmd.expand_from_prompt_desc",
   "emmet_expand_from_prompt",
   null
 );
@@ -719,4 +719,4 @@ editor.registerCommand(
 // }
 
 editor.debug("Emmet plugin loaded");
-editor.setStatus("Emmet plugin ready");
+editor.setStatus(editor.t("status.loaded"));
