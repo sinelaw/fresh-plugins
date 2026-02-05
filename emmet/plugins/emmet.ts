@@ -750,14 +750,19 @@ function activateEmmetModeForBuffer(): void {
 /**
  * Handler for buffer_activated event
  */
-(globalThis as any).emmet_on_buffer_activated = function(): void {
+declare global {
+  function emmet_on_buffer_activated(): void;
+  function emmet_on_after_file_open(): void;
+}
+
+globalThis.emmet_on_buffer_activated = function(): void {
   activateEmmetModeForBuffer();
 };
 
 /**
  * Handler for after_file_open event
  */
-(globalThis as any).emmet_on_after_file_open = function(): void {
+globalThis.emmet_on_after_file_open = function(): void {
   activateEmmetModeForBuffer();
 };
 
