@@ -1,0 +1,15 @@
+{
+  "$schema": "https://fresh-editor.dev/schemas/package.schema.json",
+  "name": "amp",
+  "version": "0.1.0",
+  "description": "Amp AI coding agent integration for Fresh Editor",
+  "type": "plugin",
+  "author": "Fresh Editor Team",
+  "license": "Apache-2.0",
+  "repository": "https://github.com/sinelaw/fresh-plugins",
+  "keywords": ["amp", "ai", "coding", "agent", "sourcegraph"],
+  "fresh": {
+    "min_version": "0.1.0",
+    "entry": "amp.ts"
+  }
+}
