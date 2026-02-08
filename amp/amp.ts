@@ -432,14 +432,25 @@ function getVisibleFileUris(): string[] {
   return uris;
 }
 
-function getCurrentSelection(): SelectionState | null {
+async function getCursorLineNumber(bufferId: number): Promise<number> {
+  const cursorPos = editor.getCursorPosition();
+  if (cursorPos <= 0) return 0;
+  const textBefore = await editor.getBufferText(bufferId, 0, cursorPos);
+  let count = 0;
+  for (let i = 0; i < textBefore.length; i++) {
+    if (textBefore.charCodeAt(i) === 10) count++;
+  }
+  return count;
+}
+
+async function getCurrentSelection(): Promise<SelectionState | null> {
   const bufferId = editor.getActiveBufferId();
   if (bufferId === null || bufferId === undefined) return null;
 
   const path = editor.getBufferPath(bufferId);
   if (!path) return null;
 
-  const cursorLine = editor.getCursorLine();
+  const cursorLine = await getCursorLineNumber(bufferId);
 
   return {
     uri: "file://" + path,
@@ -468,8 +479,8 @@ function arraysEqual(a: string[], b: string[]): boolean {
   return true;
 }
 
-function broadcastSelection(force?: boolean): void {
-  const selection = getCurrentSelection();
+async function broadcastSelection(force?: boolean): Promise<void> {
+  const selection = await getCurrentSelection();
   if (!force && selectionsEqual(selection, ampState.lastSelection)) return;
   ampState.lastSelection = selection;
   if (!selection) return;
@@ -572,7 +583,7 @@ globalThis.amp_send_message = async function(): Promise<void> {
   editor.setStatus("Message sent to Amp");
 };
 
-globalThis.amp_send_selection = function(): void {
+globalThis.amp_send_selection = async function(): Promise<void> {
   if (ampState.serverPort === null) {
     editor.setStatus("Amp: server not running — use 'Amp: Start' first");
     return;
@@ -584,9 +595,10 @@ globalThis.amp_send_selection = function(): void {
   const path = editor.getBufferPath(bufferId);
   if (!path) return;
 
+  const line = await getCursorLineNumber(bufferId) + 1;
+
   const cwd = editor.getCwd();
   const relativePath = path.startsWith(cwd + "/") ? path.slice(cwd.length + 1) : path;
-  const line = editor.getCursorLine() + 1;
   const ref = `@${relativePath}#L${line}`;
 
   sendToServer({ type: "appendToPrompt", data: { message: ref } });
