@@ -1124,6 +1124,19 @@ interface EditorAPI {
 	*/
 	setSplitRatio(splitId: number, ratio: number): boolean;
 	/**
+	* Set a label on a split (e.g., "sidebar") to mark it as managed.
+	* Labeled splits are skipped when opening files — files prefer unlabeled splits.
+	*/
+	setSplitLabel(splitId: number, label: string): boolean;
+	/**
+	* Remove a label from a split
+	*/
+	clearSplitLabel(splitId: number): boolean;
+	/**
+	* Find a split by its label. Returns the split ID or null if not found.
+	*/
+	getSplitByLabel(label: string): Promise<number | null>;
+	/**
 	* Distribute all splits evenly
 	*/
 	distributeSplitsEvenly(): boolean;

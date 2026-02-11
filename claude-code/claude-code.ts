@@ -1106,6 +1106,11 @@ async function openSidebar(): Promise<void> {
   state.sidebarSplitId = result.splitId;
   state.sidebarVisible = true;
 
+  // Label the sidebar split so file-open operations skip it
+  if (result.splitId !== null) {
+    editor.setSplitLabel(result.splitId, "claude-sidebar");
+  }
+
   // The sidebar is now the first child (30%, left).
   // The original split (70%, right) is the terminal area.
   if (state.terminalSplitId === null) {
