@@ -95,7 +95,7 @@ interface Session {
 }
 
 // Actions available in the sidebar action bar, cycled with Tab
-const SIDEBAR_ACTIONS = ["new", "close", "review", "open", "push"] as const;
+const SIDEBAR_ACTIONS = ["new", "close", "review", "push"] as const;
 type SidebarAction = typeof SIDEBAR_ACTIONS[number];
 
 interface PluginState {
@@ -107,7 +107,8 @@ interface PluginState {
   terminalSplitId: number | null;
   sidebarVisible: boolean;
   selectedIndex: number;             // cursor position in session list
-  focusedAction: number;             // index into SIDEBAR_ACTIONS, -1 = session list
+  focusedAction: number;             // -2 = details, -1 = session list, 0+ = action bar
+  detailIndex: number;               // cursor within detail items (files + commits)
   pollActive: boolean;
   pendingWorktree: string | null;    // worktree path awaiting confirmation
 }
@@ -121,7 +122,8 @@ const state: PluginState = {
   terminalSplitId: null,
   sidebarVisible: false,
   selectedIndex: 0,
-  focusedAction: -1, // -1 = focus on session list, 0+ = action bar
+  focusedAction: -1,
+  detailIndex: 0,
   pollActive: false,
   pendingWorktree: null,
 };
@@ -514,7 +516,7 @@ function renderSidebar(): TextPropertyEntry[] {
     const session = state.sessions.get(sessionId);
     if (!session) continue;
 
-    const isSelected = i === state.selectedIndex;
+    const isSelected = i === state.selectedIndex && state.focusedAction === -1;
     const isActive = sessionId === state.activeSessionId;
 
     // Status indicator
@@ -595,12 +597,18 @@ function renderSidebar(): TextPropertyEntry[] {
       text: ` ${C.CYAN}${editor.t("sidebar.files")}${C.RESET}\n`,
     });
 
+    const inDetails = state.focusedAction === -2;
+    let detailIdx = 0;
+
     if (session.fileChanges.length === 0) {
       entries.push({
         text: `   ${C.DIM}${editor.t("sidebar.no_changes")}${C.RESET}\n`,
       });
     } else {
       for (const change of session.fileChanges) {
+        const isDetailSelected = inDetails && state.detailIndex === detailIdx;
+        const pointer = isDetailSelected ? ">" : " ";
+        const nameStyle = isDetailSelected ? `${C.BOLD}${C.INVERT}` : C.WHITE;
         const fileName = truncate(change.path, width - 14);
         let stats = "";
         if (change.status === "added") {
@@ -612,12 +620,13 @@ function renderSidebar(): TextPropertyEntry[] {
           stats = parts.join(" ");
         }
         entries.push({
-          text: `   ${C.WHITE}${fileName}${C.RESET} ${stats}\n`,
+          text: ` ${C.BRIGHT_WHITE}${pointer}${C.RESET} ${nameStyle}${fileName}${C.RESET} ${stats}\n`,
           properties: {
             filePath: editor.pathJoin(session.worktree, change.path),
             sessionId: session.id,
           },
         });
+        detailIdx++;
       }
     }
 
@@ -633,8 +642,9 @@ function renderSidebar(): TextPropertyEntry[] {
       });
     } else {
       for (const commit of session.commits) {
+        const isDetailSelected = inDetails && state.detailIndex === detailIdx;
+        const pointer = isDetailSelected ? ">" : " ";
         const subjectTrunc = truncate(commit.subject, width - 22);
-        // Shorten age: "2 minutes ago" -> "2m ago", etc.
         const shortAge = commit.age
           .replace(/ seconds?/, "s")
           .replace(/ minutes?/, "m")
@@ -643,9 +653,11 @@ function renderSidebar(): TextPropertyEntry[] {
           .replace(/ weeks?/, "w")
           .replace(/ months?/, "mo")
           .replace(/ years?/, "y");
+        const hashStyle = isDetailSelected ? `${C.BOLD}${C.INVERT}` : C.YELLOW;
         entries.push({
-          text: `   ${C.YELLOW}${commit.hash}${C.RESET} ${subjectTrunc} ${C.DIM}${shortAge}${C.RESET}\n`,
+          text: ` ${C.BRIGHT_WHITE}${pointer}${C.RESET} ${hashStyle}${commit.hash}${C.RESET} ${subjectTrunc} ${C.DIM}${shortAge}${C.RESET}\n`,
         });
+        detailIdx++;
       }
     }
 
@@ -668,7 +680,6 @@ function renderSidebar(): TextPropertyEntry[] {
     { action: "new",    label: "New",       accel: "M-n" },
     { action: "close",  label: "Close",     accel: "M-c" },
     { action: "review", label: "Review",    accel: "M-r" },
-    { action: "open",   label: "Open file", accel: "M-o" },
     { action: "push",   label: "Push",      accel: "M-p" },
   ];
 
@@ -687,7 +698,7 @@ function renderSidebar(): TextPropertyEntry[] {
 
   // Navigation hints
   entries.push({
-    text: ` ${C.DIM}↑↓ navigate · Enter confirm · Tab cycle · Esc close${C.RESET}\n`,
+    text: ` ${C.DIM}↑↓ navigate · Enter open · Tab actions · Esc close${C.RESET}\n`,
   });
 
   return entries;
@@ -703,10 +714,31 @@ function updateSidebar(): void {
 // Sidebar Interaction Handlers
 // =============================================================================
 
+function getDetailItemCount(): number {
+  const sid = state.sessionOrder[state.selectedIndex];
+  const session = sid ? state.sessions.get(sid) : null;
+  if (!session) return 0;
+  return session.fileChanges.length + session.commits.length;
+}
+
 globalThis.claude_sidebar_up = function (): void {
   if (state.focusedAction >= 0) {
-    // Move focus from action bar back to session list
-    state.focusedAction = -1;
+    // Action bar → details bottom (if items exist) or sessions bottom
+    const count = getDetailItemCount();
+    if (count > 0) {
+      state.focusedAction = -2;
+      state.detailIndex = count - 1;
+    } else {
+      state.focusedAction = -1;
+    }
+  } else if (state.focusedAction === -2) {
+    // Details section
+    if (state.detailIndex > 0) {
+      state.detailIndex--;
+    } else {
+      // Top of details → back to session list
+      state.focusedAction = -1;
+    }
   } else if (state.sessionOrder.length > 0) {
     state.selectedIndex = Math.max(0, state.selectedIndex - 1);
   }
@@ -718,12 +750,26 @@ globalThis.claude_sidebar_down = function (): void {
     // Already in action bar, nowhere to go down
     return;
   }
-  if (state.sessionOrder.length === 0) {
-    // No sessions — down arrow moves to action bar
+  if (state.focusedAction === -2) {
+    // Details section
+    const count = getDetailItemCount();
+    if (state.detailIndex < count - 1) {
+      state.detailIndex++;
+    } else {
+      // Bottom of details → action bar
+      state.focusedAction = 0;
+    }
+  } else if (state.sessionOrder.length === 0) {
     state.focusedAction = 0;
   } else if (state.selectedIndex >= state.sessionOrder.length - 1) {
-    // At bottom of session list — move to action bar
-    state.focusedAction = 0;
+    // Bottom of session list → details (if items) or action bar
+    const count = getDetailItemCount();
+    if (count > 0) {
+      state.focusedAction = -2;
+      state.detailIndex = 0;
+    } else {
+      state.focusedAction = 0;
+    }
   } else {
     state.selectedIndex = Math.min(state.sessionOrder.length - 1, state.selectedIndex + 1);
   }
@@ -750,12 +796,35 @@ globalThis.claude_sidebar_select = async function (): Promise<void> {
       case "review":
         await (globalThis.claude_sidebar_review as Function)();
         break;
-      case "open":
-        (globalThis.claude_sidebar_open_file as Function)();
-        break;
       case "push":
         await (globalThis.claude_sidebar_push as Function)();
         break;
+    }
+    return;
+  }
+
+  if (state.focusedAction === -2) {
+    // In details section — open the selected file or show commit
+    const sid = state.sessionOrder[state.selectedIndex];
+    const session = sid ? state.sessions.get(sid) : null;
+    if (!session) return;
+
+    const fileCount = session.fileChanges.length;
+    if (state.detailIndex < fileCount) {
+      // File selected — open it
+      const change = session.fileChanges[state.detailIndex];
+      const fullPath = editor.pathJoin(session.worktree, change.path);
+      if (state.terminalSplitId !== null) {
+        editor.openFileInSplit(state.terminalSplitId, fullPath, 0, 0);
+      } else {
+        editor.openFile(fullPath, null, null);
+      }
+    } else {
+      // Commit selected — show diff
+      const commit = session.commits[state.detailIndex - fileCount];
+      if (commit) {
+        await openCommitView(session, commit);
+      }
     }
     return;
   }
@@ -908,32 +977,6 @@ globalThis.claude_sidebar_review = async function (): Promise<void> {
   await openReviewView(sessionId);
 };
 
-globalThis.claude_sidebar_open_file = function (): void {
-  // Open the file listed in the selected session's file changes.
-  // Uses text properties to find the file path at cursor position.
-  if (state.sidebarBufferId === null) return;
-
-  const props = editor.getTextPropertiesAtCursor(state.sidebarBufferId);
-  if (props && props.length > 0) {
-    for (const prop of props) {
-      if (prop.filePath && typeof prop.filePath === "string") {
-        if (state.terminalSplitId !== null) {
-          editor.openFileInSplit(
-            state.terminalSplitId,
-            prop.filePath as string, 0, 0
-          );
-        } else {
-          editor.openFile(prop.filePath as string, null, null);
-        }
-        return;
-      }
-    }
-  }
-
-  // No file under cursor — provide feedback
-  editor.setStatus("No file selected. Navigate to a file in the changes list first.");
-};
-
 globalThis.claude_sidebar_push = async function (): Promise<void> {
   const session = getActiveSession();
   if (!session) {
@@ -1001,6 +1044,67 @@ globalThis.claude_on_action_popup = function (data: {
     }
   }
 };
+
+// =============================================================================
+// Commit View
+// =============================================================================
+
+async function openCommitView(session: Session, commit: Commit): Promise<void> {
+  const result = await editor.spawnProcess(
+    "git", ["-C", session.worktree, "show", "--stat", "--patch", commit.hash]
+  );
+  if (result.exit_code !== 0) {
+    editor.setStatus(`Failed to show commit ${commit.hash}`);
+    return;
+  }
+
+  const entries: TextPropertyEntry[] = [];
+  const width = 60;
+  const line = "─".repeat(width);
+
+  entries.push({
+    text: `${C.BOLD}${C.CYAN} Commit ${commit.hash}${C.RESET}\n`,
+  });
+  entries.push({
+    text: `${C.DIM}${C.CYAN} ${line}${C.RESET}\n`,
+  });
+  entries.push({ text: "\n" });
+
+  for (const diffLine of result.stdout.split("\n")) {
+    if (diffLine.startsWith("+++") || diffLine.startsWith("---")) {
+      entries.push({ text: `${C.DIM}${diffLine}${C.RESET}\n` });
+    } else if (diffLine.startsWith("@@")) {
+      entries.push({ text: `${C.CYAN}${diffLine}${C.RESET}\n` });
+    } else if (diffLine.startsWith("+")) {
+      entries.push({ text: `${C.BRIGHT_GREEN}${diffLine}${C.RESET}\n` });
+    } else if (diffLine.startsWith("-")) {
+      entries.push({ text: `${C.BRIGHT_RED}${diffLine}${C.RESET}\n` });
+    } else {
+      entries.push({ text: `${diffLine}\n` });
+    }
+  }
+
+  if (state.terminalSplitId !== null) {
+    await editor.createVirtualBufferInExistingSplit({
+      name: `*Commit: ${commit.hash}*`,
+      splitId: state.terminalSplitId,
+      readOnly: true,
+      showLineNumbers: false,
+      editingDisabled: true,
+      lineWrap: true,
+      entries,
+    });
+    editor.focusSplit(state.terminalSplitId);
+  } else {
+    await editor.createVirtualBuffer({
+      name: `*Commit: ${commit.hash}*`,
+      readOnly: true,
+      showLineNumbers: false,
+      editingDisabled: true,
+      entries,
+    });
+  }
+}
 
 // =============================================================================
 // Review View
@@ -1151,7 +1255,6 @@ async function openSidebar(): Promise<void> {
     ["M-n", "claude_sidebar_new"],
     ["M-c", "claude_sidebar_close_session"],
     ["M-r", "claude_sidebar_review"],
-    ["M-o", "claude_sidebar_open_file"],
     ["M-p", "claude_sidebar_push"],
   ], true);
 
@@ -1165,7 +1268,6 @@ async function openSidebar(): Promise<void> {
     ["claude_sidebar_new", "Claude: New session", "claude_sidebar_new"],
     ["claude_sidebar_close_session", "Claude: Close session", "claude_sidebar_close_session"],
     ["claude_sidebar_review", "Claude: Review changes", "claude_sidebar_review"],
-    ["claude_sidebar_open_file", "Claude: Open file at cursor", "claude_sidebar_open_file"],
     ["claude_sidebar_push", "Claude: Push branch", "claude_sidebar_push"],
     ["claude_sidebar_quit", "Claude: Close sidebar", "claude_sidebar_quit"],
   ];
