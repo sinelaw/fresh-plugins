@@ -644,6 +644,38 @@ type VirtualBufferResult = {
 	*/
 	splitId: number | null;
 };
+type TerminalResult = {
+	/**
+	* The created buffer ID (for use with setSplitBuffer, etc.)
+	*/
+	bufferId: number;
+	/**
+	* The terminal ID (for use with sendTerminalInput, closeTerminal)
+	*/
+	terminalId: number;
+	/**
+	* The split ID (if created in a new split)
+	*/
+	splitId: number | null;
+};
+type CreateTerminalOptions = {
+	/**
+	* Working directory for the terminal (defaults to editor cwd)
+	*/
+	cwd?: string;
+	/**
+	* Split direction: "horizontal" or "vertical" (default: "vertical")
+	*/
+	direction?: string;
+	/**
+	* Split ratio 0.0-1.0 (default: 0.5)
+	*/
+	ratio?: number;
+	/**
+	* Whether to focus the new terminal split (default: true)
+	*/
+	focus?: boolean;
+};
 /**
 * Main editor API interface
 */
@@ -1201,6 +1233,19 @@ interface EditorAPI {
 	* Kill a background process
 	*/
 	killBackgroundProcess(processId: number): boolean;
+	/**
+	* Create a new terminal in a split (async, returns TerminalResult)
+	* Spawns a PTY-backed terminal that plugins can write to.
+	*/
+	createTerminal(opts?: CreateTerminalOptions): Promise<TerminalResult>;
+	/**
+	* Send input data to a terminal by its terminal ID
+	*/
+	sendTerminalInput(terminalId: number, data: string): boolean;
+	/**
+	* Close a terminal by its terminal ID
+	*/
+	closeTerminal(terminalId: number): boolean;
 	/**
 	* Force refresh of line display
 	*/

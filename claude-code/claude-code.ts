@@ -24,9 +24,12 @@
  *     ├── Terminal Bridge — creates/switches embedded terminals
  *     └── File Tracker — git-based change detection per worktree
  *
- * Required editor API additions (stubbed):
- *   - editor.createTerminal(opts)        — spawn PTY in a buffer
- *   - editor.sendTerminalInput(id, data) — write to terminal
+ * Editor API used:
+ *   - editor.createTerminal(opts)        — spawn PTY in a buffer (implemented)
+ *   - editor.sendTerminalInput(id, data) — write to terminal (implemented)
+ *   - editor.closeTerminal(id)           — close terminal (implemented)
+ *
+ * Planned editor API additions (stubbed):
  *   - editor.addWorkspaceFolder(path)    — multi-root workspace
  *   - editor.removeWorkspaceFolder(path) — remove workspace root
  *   - editor.listWorkspaceFolders()      — list workspace roots
@@ -77,6 +80,7 @@ interface Session {
   branch: string;
   prompt: string;
   terminalBufferId: number | null;
+  terminalId: number | null;
   status: "working" | "done" | "error";
   fileChanges: FileChange[];
   createdAt: number;
@@ -212,78 +216,34 @@ async function getGitChanges(worktree: string): Promise<FileChange[]> {
 // =============================================================================
 
 /**
- * STUB: Create an embedded terminal running Claude Code.
+ * Create an embedded terminal for a Claude Code session.
  *
- * Requires a new editor API:
- *   editor.createTerminal({
- *     command: string,
- *     args: string[],
- *     cwd: string,
- *     env?: Record<string, string>,
- *   }): Promise<{ bufferId: number, processId: number }>
- *
- * For now, we create a virtual buffer placeholder that shows what
- * the terminal would display. Replace this with actual terminal
- * creation once the API is available.
+ * Spawns a real PTY-backed terminal in a split using editor.createTerminal().
+ * The terminal starts a shell in the session's worktree directory.
+ * Claude Code CLI can then be launched by sending input to the terminal.
  */
 async function createSessionTerminal(
   session: Session
 ): Promise<number> {
-  // -- REAL IMPLEMENTATION (uncomment when API is available) --
-  // const term = await editor.createTerminal({
-  //   command: "claude",
-  //   args: [],
-  //   cwd: session.worktree,
-  //   env: { CLAUDE_CODE_SESSION: session.label },
-  // });
-  // return term.bufferId;
+  const term: TerminalResult = await editor.createTerminal({
+    cwd: session.worktree,
+    direction: "vertical",
+    ratio: 0.7,
+    focus: false,
+  });
 
-  // -- STUB: virtual buffer placeholder --
-  const placeholderEntries: TextPropertyEntry[] = [
-    { text: `${C.DIM}── Claude Code Terminal ──${C.RESET}\n` },
-    { text: "\n" },
-    { text: `${C.CYAN}Session:${C.RESET}   ${session.label}\n` },
-    { text: `${C.CYAN}Worktree:${C.RESET}  ${session.worktree}\n` },
-    { text: `${C.CYAN}Branch:${C.RESET}    ${session.branch}\n` },
-    { text: `${C.CYAN}Task:${C.RESET}      ${session.prompt}\n` },
-    { text: "\n" },
-    { text: `${C.DIM}This is a placeholder for an embedded terminal.${C.RESET}\n` },
-    { text: `${C.DIM}Once editor.createTerminal() is implemented,${C.RESET}\n` },
-    { text: `${C.DIM}this will be a live Claude Code CLI session.${C.RESET}\n` },
-    { text: "\n" },
-    { text: `${C.YELLOW}To test manually, run in a separate terminal:${C.RESET}\n` },
-    { text: `${C.BRIGHT_WHITE}  cd ${session.worktree} && claude${C.RESET}\n` },
-  ];
+  // Store terminal ID for sending input later
+  session.terminalId = term.terminalId;
 
-  // Create in the terminal (right) split if it exists, otherwise new split
-  let result: VirtualBufferResult;
-  if (state.terminalSplitId !== null) {
-    result = await editor.createVirtualBufferInExistingSplit({
-      name: `*Claude: ${session.label}*`,
-      splitId: state.terminalSplitId,
-      readOnly: true,
-      showLineNumbers: false,
-      showCursors: false,
-      editingDisabled: true,
-      lineWrap: true,
-      entries: placeholderEntries,
-    });
-  } else {
-    result = await editor.createVirtualBuffer({
-      name: `*Claude: ${session.label}*`,
-      readOnly: true,
-      showLineNumbers: false,
-      showCursors: false,
-      editingDisabled: true,
-      entries: placeholderEntries,
-    });
+  if (term.splitId !== null) {
+    state.terminalSplitId = term.splitId;
   }
 
-  if (result.splitId !== null) {
-    state.terminalSplitId = result.splitId;
-  }
+  // Launch Claude Code CLI in the terminal
+  const claudeCmd = `claude\n`;
+  editor.sendTerminalInput(term.terminalId, claudeCmd);
 
-  return result.bufferId;
+  return term.bufferId;
 }
 
 // =============================================================================
@@ -334,6 +294,7 @@ async function createSession(
     branch,
     prompt,
     terminalBufferId: null,
+    terminalId: null,
     status: "working",
     fileChanges: [],
     createdAt: Date.now(),
@@ -368,8 +329,10 @@ async function closeSession(sessionId: string): Promise<void> {
   const session = state.sessions.get(sessionId);
   if (!session) return;
 
-  // Close terminal buffer
-  if (session.terminalBufferId !== null) {
+  // Close terminal (this also closes its buffer)
+  if (session.terminalId !== null) {
+    editor.closeTerminal(session.terminalId);
+  } else if (session.terminalBufferId !== null) {
     editor.closeBuffer(session.terminalBufferId);
   }
 
