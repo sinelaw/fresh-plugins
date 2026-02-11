@@ -73,6 +73,12 @@ interface FileChange {
   status: "modified" | "added" | "deleted" | "renamed";
 }
 
+interface Commit {
+  hash: string;      // short hash (7 chars)
+  subject: string;   // first line of commit message
+  age: string;       // relative time ("2 minutes ago")
+}
+
 interface Session {
   id: string;
   label: string;
@@ -83,12 +89,13 @@ interface Session {
   terminalId: number | null;
   status: "working" | "done" | "error";
   fileChanges: FileChange[];
+  commits: Commit[];
   createdAt: number;
   lastActivity: number;
 }
 
 // Actions available in the sidebar action bar, cycled with Tab
-const SIDEBAR_ACTIONS = ["new", "close", "review", "open"] as const;
+const SIDEBAR_ACTIONS = ["new", "close", "review", "open", "push"] as const;
 type SidebarAction = typeof SIDEBAR_ACTIONS[number];
 
 interface PluginState {
@@ -225,6 +232,20 @@ async function getGitChanges(worktree: string): Promise<FileChange[]> {
   return changes;
 }
 
+async function getGitCommits(worktree: string, maxCount = 10): Promise<Commit[]> {
+  try {
+    const result = await editor.spawnProcess(
+      "git", ["-C", worktree, "log", "--format=%h\t%s\t%cr", `-${maxCount}`]
+    );
+    if (result.exit_code !== 0) return [];
+    return result.stdout.split("\n").filter(l => l.trim()).map(line => {
+      const [hash, subject, age] = line.split("\t");
+      return { hash, subject, age };
+    });
+  } catch { /* ignore */ }
+  return [];
+}
+
 // =============================================================================
 // Terminal Stubs
 // =============================================================================
@@ -319,6 +340,7 @@ async function createSession(
     terminalId: null,
     status: "working",
     fileChanges: [],
+    commits: [],
     createdAt: Date.now(),
     lastActivity: Date.now(),
   };
@@ -599,6 +621,34 @@ function renderSidebar(): TextPropertyEntry[] {
       }
     }
 
+    // Commits
+    entries.push({ text: "\n" });
+    entries.push({
+      text: ` ${C.CYAN}${editor.t("sidebar.commits")}${C.RESET}\n`,
+    });
+
+    if (session.commits.length === 0) {
+      entries.push({
+        text: `   ${C.DIM}${editor.t("sidebar.no_commits")}${C.RESET}\n`,
+      });
+    } else {
+      for (const commit of session.commits) {
+        const subjectTrunc = truncate(commit.subject, width - 22);
+        // Shorten age: "2 minutes ago" -> "2m ago", etc.
+        const shortAge = commit.age
+          .replace(/ seconds?/, "s")
+          .replace(/ minutes?/, "m")
+          .replace(/ hours?/, "h")
+          .replace(/ days?/, "d")
+          .replace(/ weeks?/, "w")
+          .replace(/ months?/, "mo")
+          .replace(/ years?/, "y");
+        entries.push({
+          text: `   ${C.YELLOW}${commit.hash}${C.RESET} ${subjectTrunc} ${C.DIM}${shortAge}${C.RESET}\n`,
+        });
+      }
+    }
+
     // Task/prompt
     if (session.prompt) {
       entries.push({ text: "\n" });
@@ -619,6 +669,7 @@ function renderSidebar(): TextPropertyEntry[] {
     { action: "close",  label: "Close",     accel: "M-c" },
     { action: "review", label: "Review",    accel: "M-r" },
     { action: "open",   label: "Open file", accel: "M-o" },
+    { action: "push",   label: "Push",      accel: "M-p" },
   ];
 
   let actionBar = " ";
@@ -701,6 +752,9 @@ globalThis.claude_sidebar_select = async function (): Promise<void> {
         break;
       case "open":
         (globalThis.claude_sidebar_open_file as Function)();
+        break;
+      case "push":
+        await (globalThis.claude_sidebar_push as Function)();
         break;
     }
     return;
@@ -880,6 +934,24 @@ globalThis.claude_sidebar_open_file = function (): void {
   editor.setStatus("No file selected. Navigate to a file in the changes list first.");
 };
 
+globalThis.claude_sidebar_push = async function (): Promise<void> {
+  const session = getActiveSession();
+  if (!session) {
+    editor.setStatus("No active session");
+    return;
+  }
+
+  editor.showActionPopup({
+    id: "claude-push-confirm",
+    title: `Push "${session.branch}"?`,
+    message: `This will push branch "${session.branch}" to origin.`,
+    actions: [
+      { id: "push", label: "Push" },
+      { id: "cancel", label: "Cancel" },
+    ],
+  });
+};
+
 globalThis.claude_sidebar_quit = function (): void {
   closeSidebar();
 };
@@ -894,6 +966,20 @@ globalThis.claude_on_action_popup = function (data: {
     if (sessionId) {
       closeSession(sessionId);
       updateSidebar();
+    }
+  } else if (data.popup_id === "claude-push-confirm" && data.action_id === "push") {
+    const session = getActiveSession();
+    if (session) {
+      editor.setStatus(editor.t("status.pushing", { branch: session.branch }));
+      editor.spawnProcess(
+        "git", ["-C", session.worktree, "push", "--set-upstream", "origin", session.branch]
+      ).then((result: SpawnResult) => {
+        if (result.exit_code === 0) {
+          editor.setStatus(editor.t("status.pushed", { branch: session.branch }));
+        } else {
+          editor.setStatus(editor.t("status.push_failed", { error: result.stderr.trim() }));
+        }
+      });
     }
   } else if (data.popup_id === "claude-duplicate-worktree") {
     if (data.action_id === "start-anyway" && state.pendingWorktree) {
@@ -1066,6 +1152,7 @@ async function openSidebar(): Promise<void> {
     ["M-c", "claude_sidebar_close_session"],
     ["M-r", "claude_sidebar_review"],
     ["M-o", "claude_sidebar_open_file"],
+    ["M-p", "claude_sidebar_push"],
   ], true);
 
   // Register commands — all accessible via command palette regardless
@@ -1079,6 +1166,7 @@ async function openSidebar(): Promise<void> {
     ["claude_sidebar_close_session", "Claude: Close session", "claude_sidebar_close_session"],
     ["claude_sidebar_review", "Claude: Review changes", "claude_sidebar_review"],
     ["claude_sidebar_open_file", "Claude: Open file at cursor", "claude_sidebar_open_file"],
+    ["claude_sidebar_push", "Claude: Push branch", "claude_sidebar_push"],
     ["claude_sidebar_quit", "Claude: Close sidebar", "claude_sidebar_quit"],
   ];
   for (const [name, desc, handler] of sidebarCmds) {
@@ -1172,10 +1260,13 @@ async function startPolling(): Promise<void> {
       if (session.status !== "working" && session.fileChanges.length > 0) continue;
 
       const changes = await getGitChanges(session.worktree);
-      const changed = JSON.stringify(changes) !== JSON.stringify(session.fileChanges);
+      const commits = await getGitCommits(session.worktree);
+      const changesChanged = JSON.stringify(changes) !== JSON.stringify(session.fileChanges);
+      const commitsChanged = JSON.stringify(commits) !== JSON.stringify(session.commits);
 
-      if (changed) {
+      if (changesChanged || commitsChanged) {
         session.fileChanges = changes;
+        session.commits = commits;
         session.lastActivity = Date.now();
         updateFileExplorerDecorations();
         updateSidebar();

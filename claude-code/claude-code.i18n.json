@@ -22,8 +22,13 @@
     "sidebar.worktree": "worktree:",
     "sidebar.files": "Changed files:",
     "sidebar.no_changes": "(no changes detected)",
+    "sidebar.commits": "Commits:",
+    "sidebar.no_commits": "(no commits)",
     "sidebar.status_working": "working...",
     "sidebar.status_done": "done",
-    "sidebar.status_error": "error"
+    "sidebar.status_error": "error",
+    "status.pushing": "Pushing {branch}...",
+    "status.pushed": "Pushed {branch}",
+    "status.push_failed": "Push failed: {error}"
   }
 }
