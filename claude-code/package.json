@@ -1,0 +1,16 @@
+{
+  "$schema": "https://fresh-editor.dev/schemas/package.schema.json",
+  "name": "claude-code",
+  "version": "0.1.0",
+  "description": "Claude Code integration for Fresh Editor — multi-session AI coding with embedded terminals",
+  "type": "plugin",
+  "author": "Fresh Editor Team",
+  "license": "Apache-2.0",
+  "repository": "https://github.com/sinelaw/fresh-plugins",
+  "keywords": ["claude", "ai", "coding", "agent", "anthropic", "claude-code"],
+  "fresh": {
+    "min_version": "0.1.0",
+    "min_api_version": 2,
+    "entry": "claude-code.ts"
+  }
+}

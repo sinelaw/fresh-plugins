@@ -1,0 +1,31 @@
+{
+  "en": {
+    "%cmd.claude_open": "Claude Code: Open",
+    "%cmd.claude_open_desc": "Open the Claude Code session manager",
+    "%cmd.claude_new": "Claude Code: New Session",
+    "%cmd.claude_new_desc": "Start a new Claude Code session in a worktree",
+    "%cmd.claude_close": "Claude Code: Close Session",
+    "%cmd.claude_close_desc": "Close the focused Claude Code session",
+    "%cmd.claude_toggle": "Claude Code: Toggle Sidebar",
+    "%cmd.claude_toggle_desc": "Toggle the session sidebar visibility",
+    "status.starting": "Claude Code: starting session...",
+    "status.session_created": "Claude Code: session '{label}' created",
+    "status.session_closed": "Claude Code: session '{label}' closed",
+    "status.session_switched": "Claude Code: switched to '{label}'",
+    "status.no_sessions": "Claude Code: no active sessions",
+    "status.sidebar_closed": "Claude Code: sidebar closed",
+    "prompt.worktree": "Worktree path:",
+    "prompt.task": "Task for Claude:",
+    "prompt.label": "Session label (optional):",
+    "sidebar.title": "CLAUDE SESSIONS",
+    "sidebar.no_sessions": "No active sessions",
+    "sidebar.empty_hint": "Press Tab then Enter to start a new session",
+    "sidebar.branch": "branch:",
+    "sidebar.worktree": "worktree:",
+    "sidebar.files": "Changed files:",
+    "sidebar.no_changes": "(no changes detected)",
+    "sidebar.status_working": "working...",
+    "sidebar.status_done": "done",
+    "sidebar.status_error": "error"
+  }
+}
