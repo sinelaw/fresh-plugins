@@ -84,6 +84,7 @@ interface Session {
   label: string;
   worktree: string;
   branch: string;
+  baseBranch: string;
   prompt: string;
   terminalBufferId: number | null;
   terminalId: number | null;
@@ -99,6 +100,7 @@ interface SessionMeta {
   id: string;
   label: string;
   prompt: string;
+  baseBranch: string;
   status: "working" | "done" | "error";
   createdAt: number;
   lastActivity: number;
@@ -269,8 +271,28 @@ async function getGitChanges(worktree: string): Promise<FileChange[]> {
   return changes;
 }
 
-async function getGitCommits(worktree: string, maxCount = 10): Promise<Commit[]> {
+async function getGitCommits(worktree: string, baseBranch?: string, maxCount = 10): Promise<Commit[]> {
   try {
+    // Try to show only commits since the base branch
+    if (baseBranch) {
+      const baseRef = `origin/${baseBranch}`;
+      const mbResult = await editor.spawnProcess(
+        "git", ["-C", worktree, "merge-base", baseRef, "HEAD"]
+      );
+      if (mbResult.exit_code === 0) {
+        const mergeBase = mbResult.stdout.trim();
+        const result = await editor.spawnProcess(
+          "git", ["-C", worktree, "log", "--format=%h\t%s\t%cr", `-${maxCount}`, `${mergeBase}..HEAD`]
+        );
+        if (result.exit_code === 0) {
+          return result.stdout.split("\n").filter(l => l.trim()).map(line => {
+            const [hash, subject, age] = line.split("\t");
+            return { hash, subject, age };
+          });
+        }
+      }
+    }
+    // Fallback: show recent commits
     const result = await editor.spawnProcess(
       "git", ["-C", worktree, "log", "--format=%h\t%s\t%cr", `-${maxCount}`]
     );
@@ -296,6 +318,7 @@ async function saveSessionMeta(session: Session): Promise<void> {
     id: session.id,
     label: session.label,
     prompt: session.prompt,
+    baseBranch: session.baseBranch,
     status: session.status,
     createdAt: session.createdAt,
     lastActivity: session.lastActivity,
@@ -401,6 +424,8 @@ async function createSession(
 ): Promise<Session> {
   const id = generateId();
   const branch = await getGitBranch(worktree);
+  const gitRoot = await getGitRoot(worktree);
+  const baseBranch = gitRoot ? await getDefaultBranch(gitRoot) : "main";
 
   // Auto-generate label from provided label or session ID
   const sessionLabel = label || `session-${id}`;
@@ -410,6 +435,7 @@ async function createSession(
     label: sessionLabel,
     worktree,
     branch,
+    baseBranch,
     prompt,
     terminalBufferId: null,
     terminalId: null,
@@ -1464,7 +1490,7 @@ async function startPolling(): Promise<void> {
       if (session.status !== "working" && session.fileChanges.length > 0) continue;
 
       const changes = await getGitChanges(session.worktree);
-      const commits = await getGitCommits(session.worktree);
+      const commits = await getGitCommits(session.worktree, session.baseBranch);
       const changesChanged = JSON.stringify(changes) !== JSON.stringify(session.fileChanges);
       const commitsChanged = JSON.stringify(commits) !== JSON.stringify(session.commits);
 
@@ -1573,8 +1599,9 @@ async function restoreSessions(): Promise<void> {
 
     // Derive git state from the worktree
     const branch = await getGitBranch(wt);
+    const baseBranch = meta?.baseBranch ?? await getDefaultBranch(gitRoot!);
     const fileChanges = await getGitChanges(wt);
-    const commits = await getGitCommits(wt);
+    const commits = await getGitCommits(wt, baseBranch);
 
     const id = meta?.id ?? generateId();
     const label = meta?.label ?? basename(wt);
@@ -1587,6 +1614,7 @@ async function restoreSessions(): Promise<void> {
       label,
       worktree: wt,
       branch,
+      baseBranch,
       prompt: meta?.prompt ?? "",
       terminalBufferId: null,  // lazily created on switch
       terminalId: null,
