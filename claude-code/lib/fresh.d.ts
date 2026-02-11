@@ -499,6 +499,10 @@ type CreateVirtualBufferInSplitOptions = {
 	*/
 	lineWrap?: boolean;
 	/**
+	* Place the new buffer before (left/top of) the existing content (default: false)
+	*/
+	before?: boolean;
+	/**
 	* Initial content entries with optional properties
 	*/
 	entries?: Array<TextPropertyEntry>;
@@ -664,7 +668,8 @@ type CreateTerminalOptions = {
 	*/
 	cwd?: string;
 	/**
-	* Split direction: "horizontal" or "vertical" (default: "vertical")
+	* Split direction: "horizontal" or "vertical".
+	* If omitted, no split is created — the terminal is placed in the active split.
 	*/
 	direction?: string;
 	/**

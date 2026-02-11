@@ -102,6 +102,8 @@ interface PluginState {
   selectedIndex: number;             // cursor position in session list
   focusedAction: number;             // index into SIDEBAR_ACTIONS, -1 = session list
   pollActive: boolean;
+  pendingWorktree: string | null;    // worktree path awaiting confirmation
+  pendingGitRoot: string | null;     // git root for worktree creation
 }
 
 const state: PluginState = {
@@ -115,6 +117,8 @@ const state: PluginState = {
   selectedIndex: 0,
   focusedAction: -1, // -1 = focus on session list, 0+ = action bar
   pollActive: false,
+  pendingWorktree: null,
+  pendingGitRoot: null,
 };
 
 // =============================================================================
@@ -151,6 +155,18 @@ function shortenPath(path: string): string {
 // =============================================================================
 // Git Helpers
 // =============================================================================
+
+async function getGitRoot(cwd: string): Promise<string | null> {
+  try {
+    const result = await editor.spawnProcess(
+      "git", ["-C", cwd, "rev-parse", "--show-toplevel"]
+    );
+    if (result.exit_code === 0) {
+      return result.stdout.trim();
+    }
+  } catch { /* ignore */ }
+  return null;
+}
 
 async function getGitBranch(worktree: string): Promise<string> {
   try {
@@ -218,30 +234,38 @@ async function getGitChanges(worktree: string): Promise<FileChange[]> {
 /**
  * Create an embedded terminal for a Claude Code session.
  *
- * Spawns a real PTY-backed terminal in a split using editor.createTerminal().
- * The terminal starts a shell in the session's worktree directory.
- * Claude Code CLI can then be launched by sending input to the terminal.
+ * Spawns a real PTY-backed terminal using editor.createTerminal().
+ * If the terminal split already exists, the terminal is created without
+ * a new split (direction omitted) and placed in the existing terminal area.
+ * Otherwise, the first terminal creates its own split.
  */
 async function createSessionTerminal(
   session: Session
 ): Promise<number> {
+  // If the terminal split already exists, focus it first so the new
+  // terminal buffer is created there (no new split needed).
+  if (state.terminalSplitId !== null) {
+    editor.focusSplit(state.terminalSplitId);
+  }
+
   const term: TerminalResult = await editor.createTerminal({
     cwd: session.worktree,
-    direction: "vertical",
-    ratio: 0.7,
+    // Only create a split for the very first terminal
+    ...(state.terminalSplitId === null
+      ? { direction: "vertical", ratio: 0.5 }
+      : {}),
     focus: false,
   });
 
   // Store terminal ID for sending input later
   session.terminalId = term.terminalId;
 
-  if (term.splitId !== null) {
+  if (term.splitId !== null && state.terminalSplitId === null) {
     state.terminalSplitId = term.splitId;
   }
 
   // Launch Claude Code CLI in the terminal
-  const claudeCmd = `claude\n`;
-  editor.sendTerminalInput(term.terminalId, claudeCmd);
+  editor.sendTerminalInput(term.terminalId, "claude\n");
 
   return term.bufferId;
 }
@@ -284,8 +308,8 @@ async function createSession(
   const id = generateId();
   const branch = await getGitBranch(worktree);
 
-  // Auto-generate label from prompt if not provided
-  const sessionLabel = label || prompt.slice(0, 30) || `session-${id}`;
+  // Auto-generate label from provided label or session ID
+  const sessionLabel = label || `session-${id}`;
 
   const session: Session = {
     id,
@@ -457,7 +481,7 @@ function renderSidebar(): TextPropertyEntry[] {
       text: `${C.DIM}  ${editor.t("sidebar.empty_hint")}${C.RESET}\n`,
     });
     entries.push({
-      text: `${C.DIM}  or use ${C.BRIGHT_WHITE}Alt-n${C.DIM} to start a new session${C.RESET}\n`,
+      text: `${C.DIM}  or use ${C.BRIGHT_WHITE}M-n${C.DIM} to start a new session${C.RESET}\n`,
     });
     entries.push({ text: "\n" });
     // Fall through to render the action bar below
@@ -593,10 +617,10 @@ function renderSidebar(): TextPropertyEntry[] {
   });
 
   const actionButtons: Array<{ action: SidebarAction; label: string; accel: string }> = [
-    { action: "new",    label: "New",       accel: "Alt-n" },
-    { action: "close",  label: "Close",     accel: "Alt-c" },
-    { action: "review", label: "Review",    accel: "Alt-r" },
-    { action: "open",   label: "Open file", accel: "Alt-o" },
+    { action: "new",    label: "New",       accel: "M-n" },
+    { action: "close",  label: "Close",     accel: "M-c" },
+    { action: "review", label: "Review",    accel: "M-r" },
+    { action: "open",   label: "Open file", accel: "M-o" },
   ];
 
   let actionBar = " ";
@@ -698,39 +722,110 @@ globalThis.claude_sidebar_select = async function (): Promise<void> {
 };
 
 globalThis.claude_sidebar_new = async function (): Promise<void> {
-  // Prompt for worktree path
-  const worktree = await editor.prompt(editor.t("prompt.worktree"), editor.getCwd());
+  // Generate a default worktree path based on the current project
+  const cwd = editor.getCwd();
+  const gitRoot = await getGitRoot(cwd);
+
+  let defaultPath: string;
+  if (gitRoot) {
+    // Find next available session number
+    const projectName = basename(gitRoot);
+    const worktreeDir = `${gitRoot}/.worktrees`;
+    let n = 1;
+    while (editor.fileExists(`${worktreeDir}/${projectName}-${n}`)) {
+      n++;
+    }
+    defaultPath = `${worktreeDir}/${projectName}-${n}`;
+  } else {
+    defaultPath = `${cwd}/worktree-1`;
+  }
+
+  // Prompt with the generated path — user can accept or modify
+  const worktree = await editor.prompt(editor.t("prompt.worktree"), defaultPath);
   if (worktree === null || worktree.trim() === "") return;
 
-  // Validate path exists
-  if (!editor.fileExists(worktree)) {
-    editor.setStatus(`Path does not exist: ${worktree}`);
+  const path = worktree.trim();
+
+  // Check if a session already exists on this worktree
+  const existing = findSessionByWorktree(path);
+  if (existing) {
+    state.pendingWorktree = path;
+    editor.showActionPopup({
+      id: "claude-duplicate-worktree",
+      title: "Session already exists",
+      message: `"${existing.label}" is already running on this worktree. Start another session?`,
+      actions: [
+        { id: "start-anyway", label: "Start anyway" },
+        { id: "switch", label: "Switch to existing" },
+        { id: "cancel", label: "Cancel" },
+      ],
+    });
     return;
   }
 
-  // Prompt for task
-  const task = await editor.prompt(editor.t("prompt.task"), "");
-  if (task === null || task.trim() === "") return;
+  // If path already exists, use it directly
+  if (editor.fileExists(path)) {
+    await startSessionOnWorktree(path);
+    return;
+  }
 
-  // Prompt for label (optional)
-  const label = await editor.prompt(editor.t("prompt.label"), "");
+  // Path doesn't exist — create a git worktree if we're in a git repo
+  if (gitRoot) {
+    state.pendingWorktree = path;
+    state.pendingGitRoot = gitRoot;
+    editor.showActionPopup({
+      id: "claude-create-worktree",
+      title: "Create git worktree",
+      message: `Create a new git worktree at "${shortenPath(path)}"?`,
+      actions: [
+        { id: "create-worktree", label: "Create worktree" },
+        { id: "cancel", label: "Cancel" },
+      ],
+    });
+  } else {
+    // Not a git repo — offer to create a plain directory
+    state.pendingWorktree = path;
+    state.pendingGitRoot = null;
+    editor.showActionPopup({
+      id: "claude-create-worktree",
+      title: "Create directory",
+      message: `"${shortenPath(path)}" does not exist. Create it?`,
+      actions: [
+        { id: "create-dir", label: "Create directory" },
+        { id: "cancel", label: "Cancel" },
+      ],
+    });
+  }
+};
 
-  const session = await createSession(
-    worktree.trim(),
-    task.trim(),
-    label && label.trim() ? label.trim() : undefined
-  );
+function basename(path: string): string {
+  const parts = path.replace(/\/+$/, "").split("/");
+  return parts[parts.length - 1] || path;
+}
 
-  // Select the new session
+/** Find an existing session using the given worktree path */
+function findSessionByWorktree(path: string): Session | null {
+  for (const session of state.sessions.values()) {
+    if (session.worktree === path) return session;
+  }
+  return null;
+}
+
+/** Start a new Claude session on a worktree and focus the terminal */
+async function startSessionOnWorktree(path: string): Promise<void> {
+  const label = basename(path);
+  const session = await createSession(path, "", label);
+
+  // Select and focus the new session
   state.selectedIndex = state.sessionOrder.indexOf(session.id);
   state.activeSessionId = session.id;
   updateSidebar();
 
-  // Focus sidebar so user can see the new session
-  if (state.sidebarSplitId !== null) {
-    editor.focusSplit(state.sidebarSplitId);
+  // Focus the terminal so the user can start interacting with Claude
+  if (state.terminalSplitId !== null) {
+    editor.focusSplit(state.terminalSplitId);
   }
-};
+}
 
 globalThis.claude_sidebar_close_session = async function (): Promise<void> {
   if (state.sessionOrder.length === 0) return;
@@ -810,6 +905,52 @@ globalThis.claude_on_action_popup = function (data: {
     if (sessionId) {
       closeSession(sessionId);
       updateSidebar();
+    }
+  } else if (data.popup_id === "claude-create-worktree") {
+    const path = state.pendingWorktree;
+    const gitRoot = state.pendingGitRoot;
+    state.pendingWorktree = null;
+    state.pendingGitRoot = null;
+    if (!path || data.action_id === "cancel") return;
+
+    if (data.action_id === "create-worktree" && gitRoot) {
+      // Create a git worktree
+      editor.spawnProcess(
+        "git", ["-C", gitRoot, "worktree", "add", path]
+      ).then((result: SpawnResult) => {
+        if (result.exit_code === 0) {
+          startSessionOnWorktree(path);
+        } else {
+          editor.setStatus(`Failed to create worktree: ${result.stderr.trim()}`);
+        }
+      });
+    } else if (data.action_id === "create-dir") {
+      // Create a plain directory
+      editor.spawnProcess("mkdir", ["-p", path]).then((result: SpawnResult) => {
+        if (result.exit_code === 0) {
+          startSessionOnWorktree(path);
+        } else {
+          editor.setStatus(`Failed to create directory: ${path}`);
+        }
+      });
+    }
+  } else if (data.popup_id === "claude-duplicate-worktree") {
+    if (data.action_id === "start-anyway" && state.pendingWorktree) {
+      const path = state.pendingWorktree;
+      state.pendingWorktree = null;
+      startSessionOnWorktree(path);
+    } else if (data.action_id === "switch" && state.pendingWorktree) {
+      const path = state.pendingWorktree;
+      state.pendingWorktree = null;
+      const existing = findSessionByWorktree(path);
+      if (existing) {
+        state.selectedIndex = state.sessionOrder.indexOf(existing.id);
+        state.activeSessionId = existing.id;
+        switchToSession(existing.id);
+        updateSidebar();
+      }
+    } else {
+      state.pendingWorktree = null;
     }
   }
 };
@@ -960,10 +1101,10 @@ async function openSidebar(): Promise<void> {
     ["Return", "claude_sidebar_select"],
     ["Tab", "claude_sidebar_cycle_action"],
     ["Escape", "claude_sidebar_quit"],
-    ["Alt-n", "claude_sidebar_new"],
-    ["Alt-c", "claude_sidebar_close_session"],
-    ["Alt-r", "claude_sidebar_review"],
-    ["Alt-o", "claude_sidebar_open_file"],
+    ["M-n", "claude_sidebar_new"],
+    ["M-c", "claude_sidebar_close_session"],
+    ["M-r", "claude_sidebar_review"],
+    ["M-o", "claude_sidebar_open_file"],
   ], true);
 
   // Register commands — all accessible via command palette regardless
@@ -984,6 +1125,8 @@ async function openSidebar(): Promise<void> {
   }
 
   // Create sidebar virtual buffer in a left split (30%)
+  // before=true places the new buffer as the first (left) child.
+  // ratio=0.3 gives 30% to the sidebar (first child) and 70% to the content (second child).
   const entries = renderSidebar();
   const result = await editor.createVirtualBufferInSplit({
     name: "*Claude Sessions*",
@@ -994,6 +1137,7 @@ async function openSidebar(): Promise<void> {
     editingDisabled: true,
     ratio: 0.3,
     direction: "vertical",
+    before: true,
     entries,
   });
 
@@ -1001,16 +1145,9 @@ async function openSidebar(): Promise<void> {
   state.sidebarSplitId = result.splitId;
   state.sidebarVisible = true;
 
-  // The remaining split (70%) is the terminal area.
-  // After createVirtualBufferInSplit, the new split contains the sidebar.
-  // The original (active) split becomes the terminal area. Capture it
-  // by reading the active split — the sidebar creation doesn't steal focus.
+  // The sidebar is now the first child (30%, left).
+  // The original split (70%, right) is the terminal area.
   if (state.terminalSplitId === null) {
-    // The active split before we focus the sidebar is the terminal split.
-    // We need to find the sibling split. Since splits are a binary tree,
-    // the other child of the parent is the terminal split.
-    // For now, store the active split ID as terminal — when the user
-    // switches focus back from the sidebar, it'll be the right pane.
     const activeSplit = editor.getActiveSplitId();
     if (activeSplit !== result.splitId) {
       state.terminalSplitId = activeSplit;
@@ -1121,15 +1258,19 @@ globalThis.claude_toggle = function (): void {
 // =============================================================================
 
 editor.registerCommand(
-  "%cmd.claude_open", "%cmd.claude_open_desc",
+  editor.t("%cmd.claude_open"), editor.t("%cmd.claude_open_desc"),
   "claude_open", null
 );
 editor.registerCommand(
-  "%cmd.claude_new", "%cmd.claude_new_desc",
+  editor.t("%cmd.claude_new"), editor.t("%cmd.claude_new_desc"),
   "claude_new_session", null
 );
 editor.registerCommand(
-  "%cmd.claude_toggle", "%cmd.claude_toggle_desc",
+  editor.t("%cmd.claude_close"), editor.t("%cmd.claude_close_desc"),
+  "claude_close_session", null
+);
+editor.registerCommand(
+  editor.t("%cmd.claude_toggle"), editor.t("%cmd.claude_toggle_desc"),
   "claude_toggle", null
 );
 
