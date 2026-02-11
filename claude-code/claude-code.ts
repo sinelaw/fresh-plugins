@@ -1108,6 +1108,17 @@ globalThis.claude_on_action_popup = function (data: {
 // Commit View
 // =============================================================================
 
+globalThis.claude_commit_view_close = function (): void {
+  const bufferId = editor.getCurrentBufferId();
+  if (bufferId !== null) {
+    editor.closeBuffer(bufferId);
+  }
+  // Return focus to the sidebar
+  if (state.sidebarSplitId !== null) {
+    editor.focusSplit(state.sidebarSplitId);
+  }
+};
+
 async function openCommitView(session: Session, commit: Commit): Promise<void> {
   const result = await editor.spawnProcess(
     "git", ["-C", session.worktree, "show", "--stat", "--patch", commit.hash]
@@ -1143,9 +1154,14 @@ async function openCommitView(session: Session, commit: Commit): Promise<void> {
     }
   }
 
+  editor.defineMode("claude-commit-view", "special", [
+    ["Escape", "claude_commit_view_close"],
+  ], true);
+
   if (state.terminalSplitId !== null) {
     await editor.createVirtualBufferInExistingSplit({
       name: `*Commit: ${commit.hash}*`,
+      mode: "claude-commit-view",
       splitId: state.terminalSplitId,
       readOnly: true,
       showLineNumbers: false,
@@ -1157,6 +1173,7 @@ async function openCommitView(session: Session, commit: Commit): Promise<void> {
   } else {
     await editor.createVirtualBuffer({
       name: `*Commit: ${commit.hash}*`,
+      mode: "claude-commit-view",
       readOnly: true,
       showLineNumbers: false,
       editingDisabled: true,
@@ -1527,33 +1544,39 @@ async function restoreSessions(): Promise<void> {
     if (wt === gitRoot) continue;
 
     const meta = loadSessionMeta(wt);
-    if (!meta) continue;
-
-    // Skip if a session with this id already exists (shouldn't happen, but be safe)
-    if (state.sessions.has(meta.id)) continue;
 
     // Derive git state from the worktree
     const branch = await getGitBranch(wt);
     const fileChanges = await getGitChanges(wt);
     const commits = await getGitCommits(wt);
 
+    const id = meta?.id ?? generateId();
+    const label = meta?.label ?? basename(wt);
+
+    // Skip if a session with this id already exists (shouldn't happen, but be safe)
+    if (state.sessions.has(id)) continue;
+
     const session: Session = {
-      id: meta.id,
-      label: meta.label,
+      id,
+      label,
       worktree: wt,
       branch,
-      prompt: meta.prompt,
+      prompt: meta?.prompt ?? "",
       terminalBufferId: null,  // lazily created on switch
       terminalId: null,
-      status: meta.status,
+      status: meta?.status ?? "working",
       fileChanges,
       commits,
-      createdAt: meta.createdAt,
-      lastActivity: meta.lastActivity,
+      createdAt: meta?.createdAt ?? Date.now(),
+      lastActivity: meta?.lastActivity ?? Date.now(),
     };
 
     state.sessions.set(session.id, session);
     state.sessionOrder.push(session.id);
+
+    // Persist metadata for worktrees that were missing it
+    if (!meta) saveSessionMeta(session);
+
     restored++;
   }
 
