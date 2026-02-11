@@ -185,6 +185,31 @@ async function getGitRoot(cwd: string): Promise<string | null> {
   return null;
 }
 
+async function getDefaultBranch(gitRoot: string): Promise<string> {
+  try {
+    // Check what HEAD on origin points to
+    const result = await editor.spawnProcess(
+      "git", ["-C", gitRoot, "symbolic-ref", "refs/remotes/origin/HEAD"]
+    );
+    if (result.exit_code === 0) {
+      // "refs/remotes/origin/main" → "main"
+      const ref = result.stdout.trim();
+      const parts = ref.split("/");
+      return parts[parts.length - 1];
+    }
+  } catch { /* ignore */ }
+  // Fallback: check if main or master exists
+  for (const name of ["main", "master"]) {
+    try {
+      const result = await editor.spawnProcess(
+        "git", ["-C", gitRoot, "rev-parse", "--verify", `refs/remotes/origin/${name}`]
+      );
+      if (result.exit_code === 0) return name;
+    } catch { /* ignore */ }
+  }
+  return "main";
+}
+
 async function getGitBranch(worktree: string): Promise<string> {
   try {
     const result = await editor.spawnProcess(
@@ -951,8 +976,9 @@ globalThis.claude_sidebar_new = async function (): Promise<void> {
 
   // Path doesn't exist — create it (user already confirmed by pressing Enter)
   if (gitRoot) {
+    const defaultBranch = await getDefaultBranch(gitRoot);
     const result = await editor.spawnProcess(
-      "git", ["-C", gitRoot, "worktree", "add", path]
+      "git", ["-C", gitRoot, "worktree", "add", path, `origin/${defaultBranch}`]
     );
     if (result.exit_code !== 0) {
       editor.setStatus(`Failed to create worktree: ${result.stderr.trim()}`);
