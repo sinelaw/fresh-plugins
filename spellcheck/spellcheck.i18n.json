@@ -1,0 +1,32 @@
+{
+  "en": {
+    "cmd.toggle": "Spell Check: Toggle",
+    "cmd.toggle_desc": "Toggle spell checking on/off",
+    "cmd.correct_word": "Spell Check: Correct Word",
+    "cmd.correct_word_desc": "Show spelling suggestions for word at cursor",
+    "cmd.next_error": "Spell Check: Next Error",
+    "cmd.next_error_desc": "Jump to next misspelled word",
+    "cmd.add_to_dict": "Spell Check: Add to Dictionary",
+    "cmd.add_to_dict_desc": "Add word at cursor to personal dictionary",
+    "cmd.check_buffer": "Spell Check: Check Buffer",
+    "cmd.check_buffer_desc": "Check entire buffer for spelling errors",
+    "cmd.language": "Spell Check: Language",
+    "cmd.language_desc": "Switch spell check dictionary language",
+    "status.enabled": "Spell check enabled",
+    "status.disabled": "Spell check disabled",
+    "status.no_spellchecker": "No spell checker found (install hunspell or aspell)",
+    "status.checking": "Checking spelling...",
+    "status.no_errors": "No spelling errors found",
+    "status.errors_found": "%{count} spelling error(s) found",
+    "status.word_added": "Added \"%{word}\" to personal dictionary",
+    "status.word_correct": "\"%{word}\" is spelled correctly",
+    "status.no_word": "No word at cursor",
+    "status.no_suggestions": "No suggestions for \"%{word}\"",
+    "status.replaced": "Replaced \"%{old}\" with \"%{new}\"",
+    "status.no_more_errors": "No more spelling errors",
+    "status.language_changed": "Spell check language: %{lang}",
+    "status.no_dictionaries": "No dictionaries found",
+    "prompt.replace": "Replace \"%{word}\" with:",
+    "prompt.language": "Select language:"
+  }
+}

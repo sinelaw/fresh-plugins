@@ -1,0 +1,15 @@
+{
+  "$schema": "https://fresh-editor.dev/schemas/package.schema.json",
+  "name": "spellcheck",
+  "version": "1.0.0",
+  "description": "Spell checking with hunspell/aspell, real-time highlighting, and correction suggestions",
+  "type": "plugin",
+  "author": "Fresh Editor Team",
+  "license": "MIT",
+  "repository": "https://github.com/sinelaw/fresh-plugins",
+  "keywords": ["spell", "spellcheck", "hunspell", "aspell", "dictionary"],
+  "fresh": {
+    "min_version": "0.1.0",
+    "entry": "spellcheck.ts"
+  }
+}
