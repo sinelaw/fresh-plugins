@@ -94,6 +94,16 @@ interface Session {
   lastActivity: number;
 }
 
+/** Persistent subset of session data stored in <worktree>/.fresh/session.json */
+interface SessionMeta {
+  id: string;
+  label: string;
+  prompt: string;
+  status: "working" | "done" | "error";
+  createdAt: number;
+  lastActivity: number;
+}
+
 // Actions available in the sidebar action bar, cycled with Tab
 const SIDEBAR_ACTIONS = ["new", "close", "review", "push"] as const;
 type SidebarAction = typeof SIDEBAR_ACTIONS[number];
@@ -249,6 +259,43 @@ async function getGitCommits(worktree: string, maxCount = 10): Promise<Commit[]>
 }
 
 // =============================================================================
+// Session Persistence
+// =============================================================================
+
+function sessionMetaPath(worktree: string): string {
+  return editor.pathJoin(worktree, ".fresh", "session.json");
+}
+
+async function saveSessionMeta(session: Session): Promise<void> {
+  const meta: SessionMeta = {
+    id: session.id,
+    label: session.label,
+    prompt: session.prompt,
+    status: session.status,
+    createdAt: session.createdAt,
+    lastActivity: session.lastActivity,
+  };
+  const dir = editor.pathJoin(session.worktree, ".fresh");
+  await editor.spawnProcess("mkdir", ["-p", dir]);
+  editor.writeFile(sessionMetaPath(session.worktree), JSON.stringify(meta, null, 2));
+}
+
+function loadSessionMeta(worktree: string): SessionMeta | null {
+  const path = sessionMetaPath(worktree);
+  try {
+    const content = editor.readFile(path);
+    if (!content) return null;
+    return JSON.parse(content) as SessionMeta;
+  } catch {
+    return null;
+  }
+}
+
+async function deleteSessionMeta(worktree: string): Promise<void> {
+  await editor.spawnProcess("rm", ["-f", sessionMetaPath(worktree)]);
+}
+
+// =============================================================================
 // Terminal Stubs
 // =============================================================================
 
@@ -261,7 +308,8 @@ async function getGitCommits(worktree: string, maxCount = 10): Promise<Commit[]>
  * Otherwise, the first terminal creates its own split.
  */
 async function createSessionTerminal(
-  session: Session
+  session: Session,
+  resume = false
 ): Promise<number> {
   // If the terminal split already exists, focus it first so the new
   // terminal buffer is created there (no new split needed).
@@ -285,8 +333,8 @@ async function createSessionTerminal(
     state.terminalSplitId = term.splitId;
   }
 
-  // Launch Claude Code CLI in the terminal
-  editor.sendTerminalInput(term.terminalId, "claude\n");
+  // Launch Claude Code CLI — use -c to continue existing conversation
+  editor.sendTerminalInput(term.terminalId, resume ? "claude -c\n" : "claude\n");
 
   return term.bufferId;
 }
@@ -365,6 +413,9 @@ async function createSession(
   // Update file explorer decorations
   updateFileExplorerDecorations();
 
+  // Persist session metadata to disk
+  saveSessionMeta(session);
+
   editor.setStatus(editor.t("status.session_created", { label: sessionLabel }));
   editor.debug(`[claude-code] Session created: ${id} (${sessionLabel})`);
 
@@ -374,6 +425,9 @@ async function createSession(
 async function closeSession(sessionId: string): Promise<void> {
   const session = state.sessions.get(sessionId);
   if (!session) return;
+
+  // Delete persisted metadata before removing from state
+  deleteSessionMeta(session.worktree);
 
   // Close terminal (this also closes its buffer)
   if (session.terminalId !== null) {
@@ -409,11 +463,16 @@ async function closeSession(sessionId: string): Promise<void> {
   editor.setStatus(editor.t("status.session_closed", { label: session.label }));
 }
 
-function switchToSession(sessionId: string): void {
+async function switchToSession(sessionId: string): Promise<void> {
   const session = state.sessions.get(sessionId);
   if (!session) return;
 
   state.activeSessionId = sessionId;
+
+  // Lazily create terminal for restored sessions (no terminal yet)
+  if (session.terminalBufferId === null) {
+    session.terminalBufferId = await createSessionTerminal(session, true);
+  }
 
   // Switch the terminal split to show this session's terminal
   if (session.terminalBufferId !== null && state.terminalSplitId !== null) {
@@ -1370,6 +1429,7 @@ async function startPolling(): Promise<void> {
         session.fileChanges = changes;
         session.commits = commits;
         session.lastActivity = Date.now();
+        saveSessionMeta(session);
         updateFileExplorerDecorations();
         updateSidebar();
       }
@@ -1434,11 +1494,89 @@ editor.registerCommand(
 );
 
 // =============================================================================
+// Session Restoration
+// =============================================================================
+
+/**
+ * Discover existing worktrees with persisted session metadata and
+ * reconstruct session objects. Terminals are NOT created here — they
+ * are lazily spawned when the user switches to a restored session.
+ */
+async function restoreSessions(): Promise<void> {
+  const cwd = editor.getCwd();
+  const gitRoot = await getGitRoot(cwd);
+  if (!gitRoot) return;
+
+  const result = await editor.spawnProcess(
+    "git", ["-C", gitRoot, "worktree", "list", "--porcelain"]
+  );
+  if (result.exit_code !== 0) return;
+
+  // Parse porcelain output: blocks separated by blank lines,
+  // each block starts with "worktree <path>"
+  const worktrees: string[] = [];
+  for (const line of result.stdout.split("\n")) {
+    if (line.startsWith("worktree ")) {
+      worktrees.push(line.slice("worktree ".length));
+    }
+  }
+
+  let restored = 0;
+  for (const wt of worktrees) {
+    // Skip the main worktree (same as gitRoot)
+    if (wt === gitRoot) continue;
+
+    const meta = loadSessionMeta(wt);
+    if (!meta) continue;
+
+    // Skip if a session with this id already exists (shouldn't happen, but be safe)
+    if (state.sessions.has(meta.id)) continue;
+
+    // Derive git state from the worktree
+    const branch = await getGitBranch(wt);
+    const fileChanges = await getGitChanges(wt);
+    const commits = await getGitCommits(wt);
+
+    const session: Session = {
+      id: meta.id,
+      label: meta.label,
+      worktree: wt,
+      branch,
+      prompt: meta.prompt,
+      terminalBufferId: null,  // lazily created on switch
+      terminalId: null,
+      status: meta.status,
+      fileChanges,
+      commits,
+      createdAt: meta.createdAt,
+      lastActivity: meta.lastActivity,
+    };
+
+    state.sessions.set(session.id, session);
+    state.sessionOrder.push(session.id);
+    restored++;
+  }
+
+  if (restored > 0) {
+    state.activeSessionId = state.sessionOrder[0];
+    state.selectedIndex = 0;
+    editor.setStatus(editor.t("status.sessions_restored", { count: String(restored) }));
+    editor.debug(`[claude-code] Restored ${restored} session(s)`);
+  }
+}
+
+// =============================================================================
 // Initialization
 // =============================================================================
 
 (async () => {
   editor.debug("[claude-code] Plugin loaded");
+
+  // Restore sessions from persisted worktree metadata
+  await restoreSessions();
+  if (state.sessions.size > 0) {
+    updateSidebar();
+  }
 
   // Start background polling for git changes
   startPolling();

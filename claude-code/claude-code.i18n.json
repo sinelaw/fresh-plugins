@@ -27,6 +27,7 @@
     "sidebar.status_working": "working...",
     "sidebar.status_done": "done",
     "sidebar.status_error": "error",
+    "status.sessions_restored": "Claude Code: restored {count} session(s)",
     "status.pushing": "Pushing {branch}...",
     "status.pushed": "Pushed {branch}",
     "status.push_failed": "Push failed: {error}"
