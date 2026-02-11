@@ -103,7 +103,6 @@ interface PluginState {
   focusedAction: number;             // index into SIDEBAR_ACTIONS, -1 = session list
   pollActive: boolean;
   pendingWorktree: string | null;    // worktree path awaiting confirmation
-  pendingGitRoot: string | null;     // git root for worktree creation
 }
 
 const state: PluginState = {
@@ -118,7 +117,6 @@ const state: PluginState = {
   focusedAction: -1, // -1 = focus on session list, 0+ = action bar
   pollActive: false,
   pendingWorktree: null,
-  pendingGitRoot: null,
 };
 
 // =============================================================================
@@ -769,33 +767,24 @@ globalThis.claude_sidebar_new = async function (): Promise<void> {
     return;
   }
 
-  // Path doesn't exist — create a git worktree if we're in a git repo
+  // Path doesn't exist — create it (user already confirmed by pressing Enter)
   if (gitRoot) {
-    state.pendingWorktree = path;
-    state.pendingGitRoot = gitRoot;
-    editor.showActionPopup({
-      id: "claude-create-worktree",
-      title: "Create git worktree",
-      message: `Create a new git worktree at "${shortenPath(path)}"?`,
-      actions: [
-        { id: "create-worktree", label: "Create worktree" },
-        { id: "cancel", label: "Cancel" },
-      ],
-    });
+    const result = await editor.spawnProcess(
+      "git", ["-C", gitRoot, "worktree", "add", path]
+    );
+    if (result.exit_code !== 0) {
+      editor.setStatus(`Failed to create worktree: ${result.stderr.trim()}`);
+      return;
+    }
   } else {
-    // Not a git repo — offer to create a plain directory
-    state.pendingWorktree = path;
-    state.pendingGitRoot = null;
-    editor.showActionPopup({
-      id: "claude-create-worktree",
-      title: "Create directory",
-      message: `"${shortenPath(path)}" does not exist. Create it?`,
-      actions: [
-        { id: "create-dir", label: "Create directory" },
-        { id: "cancel", label: "Cancel" },
-      ],
-    });
+    const result = await editor.spawnProcess("mkdir", ["-p", path]);
+    if (result.exit_code !== 0) {
+      editor.setStatus(`Failed to create directory: ${path}`);
+      return;
+    }
   }
+
+  await startSessionOnWorktree(path);
 };
 
 function basename(path: string): string {
@@ -905,34 +894,6 @@ globalThis.claude_on_action_popup = function (data: {
     if (sessionId) {
       closeSession(sessionId);
       updateSidebar();
-    }
-  } else if (data.popup_id === "claude-create-worktree") {
-    const path = state.pendingWorktree;
-    const gitRoot = state.pendingGitRoot;
-    state.pendingWorktree = null;
-    state.pendingGitRoot = null;
-    if (!path || data.action_id === "cancel") return;
-
-    if (data.action_id === "create-worktree" && gitRoot) {
-      // Create a git worktree
-      editor.spawnProcess(
-        "git", ["-C", gitRoot, "worktree", "add", path]
-      ).then((result: SpawnResult) => {
-        if (result.exit_code === 0) {
-          startSessionOnWorktree(path);
-        } else {
-          editor.setStatus(`Failed to create worktree: ${result.stderr.trim()}`);
-        }
-      });
-    } else if (data.action_id === "create-dir") {
-      // Create a plain directory
-      editor.spawnProcess("mkdir", ["-p", path]).then((result: SpawnResult) => {
-        if (result.exit_code === 0) {
-          startSessionOnWorktree(path);
-        } else {
-          editor.setStatus(`Failed to create directory: ${path}`);
-        }
-      });
     }
   } else if (data.popup_id === "claude-duplicate-worktree") {
     if (data.action_id === "start-anyway" && state.pendingWorktree) {
