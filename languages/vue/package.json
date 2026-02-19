@@ -1,0 +1,38 @@
+{
+  "$schema": "https://raw.githubusercontent.com/sinelaw/fresh/main/crates/fresh-editor/plugins/schemas/package.schema.json",
+  "name": "vue",
+  "version": "0.1.0",
+  "description": "Vue 3 language support - syntax highlighting for SFCs, LSP integration via vue-language-server (Volar)",
+  "type": "language",
+  "author": "",
+  "license": "MIT",
+  "keywords": ["vue", "vue3", "volar", "sfc", "javascript", "typescript", "frontend"],
+  "fresh": {
+    "grammar": {
+      "file": "grammars/Vue.sublime-syntax",
+      "extensions": ["vue"]
+    },
+    "language": {
+      "commentPrefix": "//",
+      "blockCommentStart": "<!--",
+      "blockCommentEnd": "-->",
+      "tabSize": 2,
+      "useTabs": false,
+      "autoIndent": true,
+      "formatter": {
+        "command": "prettier",
+        "args": ["--write", "--parser", "vue"]
+      }
+    },
+    "lsp": {
+      "command": "vue-language-server",
+      "args": ["--stdio"],
+      "autoStart": true,
+      "initializationOptions": {
+        "vue": {
+          "hybridMode": false
+        }
+      }
+    }
+  }
+}

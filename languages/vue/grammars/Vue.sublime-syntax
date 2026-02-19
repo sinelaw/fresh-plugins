@@ -1,0 +1,525 @@
+%YAML 1.2
+---
+# Vue Single File Component syntax grammar for Fresh editor.
+# Self-contained grammar with embedded HTML, JavaScript, and CSS contexts.
+name: vue
+scope: source.vue
+file_extensions: [vue]
+
+variables:
+  unquoted_attribute_value: (?:[^\s"'=<>`]+)
+  tag_name: '[a-zA-Z][a-zA-Z0-9:._-]*'
+  vue_directive: '(?:v-[a-z]+(?::[a-zA-Z0-9._-]+)?(?:\.[a-z]+)*|@[a-zA-Z0-9._-]+(?:\.[a-z]+)*|:[a-zA-Z0-9._-]+(?:\.[a-z]+)*|#[a-zA-Z0-9._-]*)'
+  js_ident: '[a-zA-Z_$][a-zA-Z0-9_$]*'
+  css_ident: '[-a-zA-Z_][a-zA-Z0-9_-]*'
+
+contexts:
+  main:
+    - include: template-block
+    - include: script-block
+    - include: style-block
+    - include: html-comment
+
+  # ─── Top-level blocks ──────────────────────────────────────────────
+
+  template-block:
+    - match: (<)(template)\b
+      captures:
+        1: punctuation.definition.tag.begin.html.vue
+        2: entity.name.tag.block.template.vue
+      push:
+        - meta_scope: meta.block.template.vue
+        - match: '>'
+          scope: punctuation.definition.tag.end.html.vue
+          set: template-body
+        - include: html-tag-attributes
+
+  template-body:
+    - meta_content_scope: meta.block.template.vue
+    - match: (</)(template)\s*(>)
+      captures:
+        1: punctuation.definition.tag.begin.html.vue
+        2: entity.name.tag.block.template.vue
+        3: punctuation.definition.tag.end.html.vue
+      pop: true
+    - include: template-content
+
+  script-block:
+    - match: (<)(script)\b
+      captures:
+        1: punctuation.definition.tag.begin.html.vue
+        2: entity.name.tag.block.script.vue
+      push:
+        - meta_scope: meta.block.script.vue
+        - match: '>'
+          scope: punctuation.definition.tag.end.html.vue
+          set: script-body
+        - include: html-tag-attributes
+
+  script-body:
+    - meta_content_scope: meta.block.script.vue source.js.embedded.vue
+    - match: (</)(script)\s*(>)
+      captures:
+        1: punctuation.definition.tag.begin.html.vue
+        2: entity.name.tag.block.script.vue
+        3: punctuation.definition.tag.end.html.vue
+      pop: true
+    - include: js-content
+
+  style-block:
+    - match: (<)(style)\b
+      captures:
+        1: punctuation.definition.tag.begin.html.vue
+        2: entity.name.tag.block.style.vue
+      push:
+        - meta_scope: meta.block.style.vue
+        - match: '>'
+          scope: punctuation.definition.tag.end.html.vue
+          set: style-body
+        - include: html-tag-attributes
+
+  style-body:
+    - meta_content_scope: meta.block.style.vue source.css.embedded.vue
+    - match: (</)(style)\s*(>)
+      captures:
+        1: punctuation.definition.tag.begin.html.vue
+        2: entity.name.tag.block.style.vue
+        3: punctuation.definition.tag.end.html.vue
+      pop: true
+    - include: css-content
+
+  # ─── Template content (HTML + Vue) ─────────────────────────────────
+
+  template-content:
+    - include: html-comment
+    - include: vue-interpolation
+    - include: html-tag
+    - include: html-entities
+
+  vue-interpolation:
+    - match: '\{\{'
+      scope: punctuation.section.interpolation.begin.vue
+      push:
+        - meta_scope: meta.interpolation.vue
+        - match: '\}\}'
+          scope: punctuation.section.interpolation.end.vue
+          pop: true
+        - include: js-expression
+
+  html-comment:
+    - match: '<!--'
+      scope: punctuation.definition.comment.begin.html
+      push:
+        - meta_scope: comment.block.html
+        - match: '-->'
+          scope: punctuation.definition.comment.end.html
+          pop: true
+
+  html-tag:
+    # Opening and self-closing tags
+    - match: (<)({{tag_name}})
+      captures:
+        1: punctuation.definition.tag.begin.html.vue
+        2: entity.name.tag.html.vue
+      push:
+        - meta_scope: meta.tag.html.vue
+        - match: '/>'
+          scope: punctuation.definition.tag.end.html.vue
+          pop: true
+        - match: '>'
+          scope: punctuation.definition.tag.end.html.vue
+          pop: true
+        - include: html-tag-attributes
+    # Closing tags
+    - match: (</)({{tag_name}})\s*(>)
+      captures:
+        1: punctuation.definition.tag.begin.html.vue
+        2: entity.name.tag.html.vue
+        3: punctuation.definition.tag.end.html.vue
+
+  html-tag-attributes:
+    - include: vue-directive-attribute
+    - include: html-attribute
+
+  vue-directive-attribute:
+    # v-bind:prop, v-on:event, v-if, v-for, :prop, @event, #slot
+    - match: '({{vue_directive}})'
+      scope: entity.other.attribute-name.directive.vue
+      push:
+        - match: '='
+          scope: punctuation.separator.key-value.html
+          set: vue-attribute-value
+        - match: '(?=[\s/>])'
+          pop: true
+
+  vue-attribute-value:
+    - match: '"'
+      scope: punctuation.definition.string.begin.html
+      set:
+        - meta_scope: meta.attribute-with-value.directive.vue string.quoted.double.html
+        - meta_content_scope: source.js.embedded.vue
+        - match: '"'
+          scope: punctuation.definition.string.end.html
+          pop: true
+        - include: js-expression
+    - match: "'"
+      scope: punctuation.definition.string.begin.html
+      set:
+        - meta_scope: meta.attribute-with-value.directive.vue string.quoted.single.html
+        - meta_content_scope: source.js.embedded.vue
+        - match: "'"
+          scope: punctuation.definition.string.end.html
+          pop: true
+        - include: js-expression
+    - match: '(?=[\s/>])'
+      pop: true
+
+  html-attribute:
+    - match: '({{tag_name}})'
+      scope: entity.other.attribute-name.html
+      push:
+        - match: '='
+          scope: punctuation.separator.key-value.html
+          set: html-attribute-value
+        - match: '(?=[\s/>])'
+          pop: true
+
+  html-attribute-value:
+    - match: '"'
+      scope: punctuation.definition.string.begin.html
+      set:
+        - meta_scope: string.quoted.double.html
+        - match: '"'
+          scope: punctuation.definition.string.end.html
+          pop: true
+    - match: "'"
+      scope: punctuation.definition.string.begin.html
+      set:
+        - meta_scope: string.quoted.single.html
+        - match: "'"
+          scope: punctuation.definition.string.end.html
+          pop: true
+    - match: '{{unquoted_attribute_value}}'
+      scope: string.unquoted.html
+      pop: true
+    - match: '(?=[\s/>])'
+      pop: true
+
+  html-entities:
+    - match: '&[a-zA-Z0-9]+;'
+      scope: constant.character.entity.html
+    - match: '&#[0-9]+;'
+      scope: constant.character.entity.numeric.html
+    - match: '&#x[0-9a-fA-F]+;'
+      scope: constant.character.entity.hexadecimal.html
+
+  # ─── JavaScript / TypeScript ────────────────────────────────────────
+
+  js-content:
+    - include: js-comment
+    - include: js-string
+    - include: js-template-literal
+    - include: js-number
+    - include: js-keyword
+    - include: js-type-keyword
+    - include: js-constant
+    - include: js-function-call
+    - include: js-arrow
+    - include: js-operator
+    - include: js-decorator
+
+  js-expression:
+    - include: js-comment
+    - include: js-string
+    - include: js-template-literal
+    - include: js-number
+    - include: js-keyword
+    - include: js-constant
+    - include: js-function-call
+    - include: js-arrow
+    - include: js-operator
+
+  js-comment:
+    - match: '//'
+      scope: punctuation.definition.comment.js
+      push:
+        - meta_scope: comment.line.double-slash.js
+        - match: '$'
+          pop: true
+    - match: '/\*'
+      scope: punctuation.definition.comment.begin.js
+      push:
+        - meta_scope: comment.block.js
+        - match: '\*/'
+          scope: punctuation.definition.comment.end.js
+          pop: true
+
+  js-string:
+    - match: '"'
+      scope: punctuation.definition.string.begin.js
+      push:
+        - meta_scope: string.quoted.double.js
+        - match: '"'
+          scope: punctuation.definition.string.end.js
+          pop: true
+        - match: '\\.'
+          scope: constant.character.escape.js
+    - match: "'"
+      scope: punctuation.definition.string.begin.js
+      push:
+        - meta_scope: string.quoted.single.js
+        - match: "'"
+          scope: punctuation.definition.string.end.js
+          pop: true
+        - match: '\\.'
+          scope: constant.character.escape.js
+
+  js-template-literal:
+    - match: '`'
+      scope: punctuation.definition.string.begin.js
+      push:
+        - meta_scope: string.quoted.other.template.js
+        - match: '`'
+          scope: punctuation.definition.string.end.js
+          pop: true
+        - match: '\$\{'
+          scope: punctuation.section.interpolation.begin.js
+          push:
+            - meta_scope: meta.interpolation.js
+            - match: '\}'
+              scope: punctuation.section.interpolation.end.js
+              pop: true
+            - include: js-expression
+        - match: '\\.'
+          scope: constant.character.escape.js
+
+  js-number:
+    - match: '\b0[xX][0-9a-fA-F][0-9a-fA-F_]*n?\b'
+      scope: constant.numeric.hex.js
+    - match: '\b0[oO][0-7][0-7_]*n?\b'
+      scope: constant.numeric.octal.js
+    - match: '\b0[bB][01][01_]*n?\b'
+      scope: constant.numeric.binary.js
+    - match: '\b[0-9][0-9_]*\.?[0-9_]*(?:[eE][+-]?[0-9_]+)?n?\b'
+      scope: constant.numeric.decimal.js
+
+  js-keyword:
+    # Import / export
+    - match: '\b(import|export|from|default|as)\b'
+      scope: keyword.control.import.js
+    # Control flow
+    - match: '\b(if|else|for|while|do|switch|case|break|continue|return|throw|try|catch|finally|yield|await)\b'
+      scope: keyword.control.flow.js
+    # Declarations
+    - match: '\b(var|let|const|function|class|extends|implements|constructor|static|get|set|async)\b'
+      scope: keyword.declaration.js
+    # Operators
+    - match: '\b(new|delete|typeof|instanceof|in|of|void)\b'
+      scope: keyword.operator.js
+    # Vue-specific (Composition API)
+    - match: '\b(defineProps|defineEmits|defineExpose|defineOptions|defineSlots|defineModel|withDefaults)\b'
+      scope: support.function.vue
+    # Common Vue imports
+    - match: '\b(ref|reactive|computed|watch|watchEffect|onMounted|onUnmounted|onBeforeMount|onBeforeUnmount|onUpdated|onBeforeUpdate|onActivated|onDeactivated|onErrorCaptured|provide|inject|nextTick|toRef|toRefs|toRaw|markRaw|shallowRef|shallowReactive|readonly|shallowReadonly|triggerRef|customRef|unref|isRef|isReactive|isReadonly|isProxy|defineComponent|defineAsyncComponent|h|createApp|useAttrs|useSlots)\b'
+      scope: support.function.vue
+
+  js-type-keyword:
+    # TypeScript keywords
+    - match: '\b(type|interface|enum|namespace|declare|abstract|readonly|keyof|infer|asserts|is|satisfies|using)\b'
+      scope: keyword.declaration.type.ts
+    # Built-in types
+    - match: '\b(string|number|boolean|object|symbol|bigint|any|unknown|never|void)\b'
+      scope: support.type.builtin.ts
+    # Vue type helpers
+    - match: '\b(Ref|ComputedRef|PropType|Component|ComponentPublicInstance|VNode|Plugin|App|Directive)\b'
+      scope: support.type.vue
+
+  js-constant:
+    - match: '\b(true|false)\b'
+      scope: constant.language.boolean.js
+    - match: '\b(null)\b'
+      scope: constant.language.null.js
+    - match: '\b(undefined)\b'
+      scope: constant.language.undefined.js
+    - match: '\b(this|super)\b'
+      scope: variable.language.js
+    - match: '\b(NaN|Infinity)\b'
+      scope: constant.language.js
+    - match: '\b[A-Z][A-Z_0-9]+\b'
+      scope: constant.other.caps.js
+
+  js-function-call:
+    - match: '\b({{js_ident}})\s*(?=\()'
+      captures:
+        1: variable.function.js
+
+  js-arrow:
+    - match: '=>'
+      scope: storage.type.function.arrow.js
+
+  js-operator:
+    - match: '===|!==|==|!=|<=|>=|<|>'
+      scope: keyword.operator.comparison.js
+    - match: '&&|\|\||!'
+      scope: keyword.operator.logical.js
+    - match: '\?\?|\?\.'
+      scope: keyword.operator.nullcoalescing.js
+    - match: '\+\+|--'
+      scope: keyword.operator.arithmetic.js
+    - match: '\.{3}'
+      scope: keyword.operator.spread.js
+    - match: '[+\-*/%]='
+      scope: keyword.operator.assignment.augmented.js
+    - match: '='
+      scope: keyword.operator.assignment.js
+
+  js-decorator:
+    - match: '(@)({{js_ident}})'
+      captures:
+        1: punctuation.definition.decorator.js
+        2: meta.decorator.js entity.name.function.decorator.js
+
+  # ─── CSS ────────────────────────────────────────────────────────────
+
+  css-content:
+    - include: css-comment
+    - include: css-at-rule
+    - include: css-selector
+
+  css-comment:
+    - match: '/\*'
+      scope: punctuation.definition.comment.begin.css
+      push:
+        - meta_scope: comment.block.css
+        - match: '\*/'
+          scope: punctuation.definition.comment.end.css
+          pop: true
+
+  css-at-rule:
+    - match: '(@)(import|charset|font-face|keyframes|media|supports|layer|container|property|scope|starting-style)\b'
+      captures:
+        1: punctuation.definition.keyword.css
+        2: keyword.control.at-rule.css
+
+  css-selector:
+    # Class selectors
+    - match: '(\.){{css_ident}}'
+      scope: entity.other.attribute-name.class.css
+    # ID selectors
+    - match: '(#){{css_ident}}'
+      scope: entity.other.attribute-name.id.css
+    # Pseudo-classes and pseudo-elements
+    - match: '(::?)({{css_ident}})'
+      captures:
+        1: punctuation.definition.pseudo.css
+        2: entity.other.pseudo-class.css
+    # Vue deep selectors
+    - match: ':deep\b|:slotted\b|:global\b'
+      scope: entity.other.pseudo-class.vue.css
+    # CSS custom properties
+    - match: '(--)({{css_ident}})'
+      captures:
+        1: punctuation.definition.custom-property.css
+        2: support.type.custom-property.css
+    # v-bind in CSS
+    - match: '\b(v-bind)\s*(\()'
+      captures:
+        1: support.function.vue.css
+        2: punctuation.section.group.begin.css
+      push:
+        - meta_scope: meta.function-call.vue.css
+        - match: '\)'
+          scope: punctuation.section.group.end.css
+          pop: true
+        - include: js-expression
+    # Property declarations inside blocks
+    - match: '\{'
+      scope: punctuation.section.block.begin.css
+      push:
+        - match: '\}'
+          scope: punctuation.section.block.end.css
+          pop: true
+        - include: css-comment
+        - include: css-property
+    # Tag selectors
+    - match: '\b(html|body|div|span|p|a|ul|ol|li|h[1-6]|img|input|button|form|table|tr|td|th|thead|tbody|section|article|aside|header|footer|nav|main|label|select|textarea|video|audio|canvas|svg|slot)\b'
+      scope: entity.name.tag.css
+
+  css-property:
+    - match: '({{css_ident}})\s*(:)'
+      captures:
+        1: support.type.property-name.css
+        2: punctuation.separator.key-value.css
+      push:
+        - meta_scope: meta.property-value.css
+        - match: ';'
+          scope: punctuation.terminator.rule.css
+          pop: true
+        - match: '(?=\})'
+          pop: true
+        - include: css-value
+
+  css-value:
+    - include: css-comment
+    # Strings
+    - match: '"'
+      scope: punctuation.definition.string.begin.css
+      push:
+        - meta_scope: string.quoted.double.css
+        - match: '"'
+          scope: punctuation.definition.string.end.css
+          pop: true
+        - match: '\\.'
+          scope: constant.character.escape.css
+    - match: "'"
+      scope: punctuation.definition.string.begin.css
+      push:
+        - meta_scope: string.quoted.single.css
+        - match: "'"
+          scope: punctuation.definition.string.end.css
+          pop: true
+        - match: '\\.'
+          scope: constant.character.escape.css
+    # Colors
+    - match: '#[0-9a-fA-F]{3,8}\b'
+      scope: constant.other.color.hex.css
+    # Numbers with units
+    - match: '(-?[0-9]*\.?[0-9]+)(px|em|rem|%|vh|vw|vmin|vmax|ch|ex|cm|mm|in|pt|pc|s|ms|deg|rad|turn|fr|dpi|dpcm|dppx)\b'
+      captures:
+        1: constant.numeric.css
+        2: keyword.other.unit.css
+    # Bare numbers
+    - match: '-?[0-9]*\.?[0-9]+'
+      scope: constant.numeric.css
+    # Named colors and constants
+    - match: '\b(inherit|initial|unset|revert|none|auto|normal|bold|italic|solid|dashed|dotted|flex|grid|block|inline|inline-block|inline-flex|inline-grid|absolute|relative|fixed|sticky|static|transparent|currentColor|important)\b'
+      scope: support.constant.property-value.css
+    # Functions
+    - match: '\b({{css_ident}})\s*(\()'
+      captures:
+        1: support.function.css
+        2: punctuation.section.group.begin.css
+      push:
+        - match: '\)'
+          scope: punctuation.section.group.end.css
+          pop: true
+        - include: css-value
+    # !important
+    - match: '!'
+      scope: keyword.other.important.css
+    # v-bind in property values
+    - match: '\b(v-bind)\s*(\()'
+      captures:
+        1: support.function.vue.css
+        2: punctuation.section.group.begin.css
+      push:
+        - meta_scope: meta.function-call.vue.css
+        - match: '\)'
+          scope: punctuation.section.group.end.css
+          pop: true
+        - include: js-expression
+    # CSS custom property references
+    - match: 'var\s*(\()\s*(--{{css_ident}})'
+      captures:
+        1: punctuation.section.group.begin.css
+        2: variable.other.custom-property.css
