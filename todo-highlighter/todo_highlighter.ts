@@ -68,7 +68,7 @@ function clearHighlights(bufferId: number): void {
 
 // Handle lines_changed events (batched for efficiency)
 // This is called for lines that need (re)processing
-globalThis.onLinesChanged = function(data: {
+registerHandler("onLinesChanged", function(data: {
   buffer_id: number;
   lines: Array<{
     line_number: number;
@@ -83,11 +83,11 @@ globalThis.onLinesChanged = function(data: {
   for (const line of data.lines) {
     highlightLine(data.buffer_id, line.byte_start, line.content);
   }
-};
+});
 
 // Handle buffer content changes - clear only affected overlays
 // The editor will automatically re-send the affected lines via lines_changed
-globalThis.onAfterInsert = function(data: {
+registerHandler("onAfterInsert", function(data: {
   buffer_id: number;
   position: number;
   text: string;
@@ -100,9 +100,9 @@ globalThis.onAfterInsert = function(data: {
   // These overlays may now span corrupted content (e.g., "TODO" -> "TOxDO")
   // The affected lines will be re-sent via lines_changed with correct content
   editor.clearOverlaysInRange(data.buffer_id, data.affected_start, data.affected_end);
-};
+});
 
-globalThis.onAfterDelete = function(data: {
+registerHandler("onAfterDelete", function(data: {
   buffer_id: number;
   start: number;
   end: number;
@@ -120,12 +120,12 @@ globalThis.onAfterDelete = function(data: {
   const clearStart = data.affected_start > 0 ? data.affected_start - 1 : 0;
   const clearEnd = data.affected_start + 1;
   editor.clearOverlaysInRange(data.buffer_id, clearStart, clearEnd);
-};
+});
 
 // Handle buffer close events
-globalThis.onBufferClosed = function(data: { buffer_id: number }): void {
+registerHandler("onBufferClosed", function(data: { buffer_id: number }): void {
   // No cleanup needed - overlays are automatically cleaned up with the buffer
-};
+});
 
 // Register hooks
 editor.on("lines_changed", "onLinesChanged");
@@ -134,22 +134,22 @@ editor.on("after_delete", "onAfterDelete");
 editor.on("buffer_closed", "onBufferClosed");
 
 // Plugin commands
-globalThis.todoHighlighterEnable = function(): void {
+registerHandler("todoHighlighterEnable", function(): void {
   config.enabled = true;
   // Refresh lines so next render processes all visible lines
   const bufferId = editor.getActiveBufferId();
   editor.refreshLines(bufferId);
   editor.setStatus(editor.t("status.enabled"));
-};
+});
 
-globalThis.todoHighlighterDisable = function(): void {
+registerHandler("todoHighlighterDisable", function(): void {
   config.enabled = false;
   const bufferId = editor.getActiveBufferId();
   clearHighlights(bufferId);
   editor.setStatus(editor.t("status.disabled"));
-};
+});
 
-globalThis.todoHighlighterToggle = function(): void {
+registerHandler("todoHighlighterToggle", function(): void {
   config.enabled = !config.enabled;
   const bufferId = editor.getActiveBufferId();
   if (config.enabled) {
@@ -159,12 +159,12 @@ globalThis.todoHighlighterToggle = function(): void {
     clearHighlights(bufferId);
   }
   editor.setStatus(config.enabled ? editor.t("status.enabled") : editor.t("status.disabled"));
-};
+});
 
-globalThis.todoHighlighterShowKeywords = function(): void {
+registerHandler("todoHighlighterShowKeywords", function(): void {
   const keywords = config.keywords.map(k => k.word).join(", ");
   editor.setStatus(editor.t("status.keywords", { keywords }));
-};
+});
 
 // Register commands
 editor.registerCommand(

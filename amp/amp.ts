@@ -534,25 +534,25 @@ function stopEventTracking(): void {
   editor.off("cursor_moved", "amp_on_cursor_moved");
 }
 
-globalThis.amp_on_buffer_event = function(): void {
+registerHandler("amp_on_buffer_event", function(): void {
   broadcastVisibleFiles();
-};
+});
 
-globalThis.amp_on_cursor_moved = function(): void {
+registerHandler("amp_on_cursor_moved", function(): void {
   broadcastSelection();
-};
+});
 
 // =============================================================================
 // User Commands
 // =============================================================================
 
-globalThis.amp_start = async function(): Promise<void> {
+registerHandler("amp_start", async function(): Promise<void> {
   await startServer();
-};
+});
 
-globalThis.amp_stop = async function(): Promise<void> {
+registerHandler("amp_stop", async function(): Promise<void> {
   await stopServer();
-};
+});
 
 function getLogFilePath(): string {
   const cache = editor.getEnv("XDG_CACHE_HOME") ||
@@ -560,7 +560,7 @@ function getLogFilePath(): string {
   return editor.pathJoin(cache, "fresh", "amp-server.log");
 }
 
-globalThis.amp_status = function(): void {
+registerHandler("amp_status", function(): void {
   const logPath = getLogFilePath();
   if (ampState.serverPort !== null) {
     const status = ampState.connected ? "connected" : "waiting for Amp CLI";
@@ -568,9 +568,9 @@ globalThis.amp_status = function(): void {
   } else {
     editor.setStatus(`Amp: not running — log: ${logPath}`);
   }
-};
+});
 
-globalThis.amp_send_message = async function(): Promise<void> {
+registerHandler("amp_send_message", async function(): Promise<void> {
   if (ampState.serverPort === null) {
     editor.setStatus("Amp: server not running — use 'Amp: Start' first");
     return;
@@ -581,9 +581,9 @@ globalThis.amp_send_message = async function(): Promise<void> {
 
   sendToServer({ type: "userSentMessage", data: { message } });
   editor.setStatus("Message sent to Amp");
-};
+});
 
-globalThis.amp_send_selection = async function(): Promise<void> {
+registerHandler("amp_send_selection", async function(): Promise<void> {
   if (ampState.serverPort === null) {
     editor.setStatus("Amp: server not running — use 'Amp: Start' first");
     return;
@@ -603,7 +603,7 @@ globalThis.amp_send_selection = async function(): Promise<void> {
 
   sendToServer({ type: "appendToPrompt", data: { message: ref } });
   editor.setStatus(`Added ${ref} to Amp prompt`);
-};
+});
 
 // =============================================================================
 // Command Registration

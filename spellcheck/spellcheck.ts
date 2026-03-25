@@ -604,7 +604,7 @@ function disableSpellCheck(): void {
 // Event Handlers
 // ============================================================================
 
-globalThis.spellcheck_on_lines_changed = function (data: {
+registerHandler("spellcheck_on_lines_changed", function (data: {
   buffer_id: number;
   lines: Array<{
     line_number: number;
@@ -626,9 +626,9 @@ globalThis.spellcheck_on_lines_changed = function (data: {
   for (const line of data.lines) {
     checkLine(data.buffer_id, line.byte_start, line.content);
   }
-};
+});
 
-globalThis.spellcheck_on_after_insert = function (data: {
+registerHandler("spellcheck_on_after_insert", function (data: {
   buffer_id: number;
   position: number;
   text: string;
@@ -649,9 +649,9 @@ globalThis.spellcheck_on_after_insert = function (data: {
       errors.filter((e) => e.end <= data.affected_start || e.start >= data.affected_end),
     );
   }
-};
+});
 
-globalThis.spellcheck_on_after_delete = function (data: {
+registerHandler("spellcheck_on_after_delete", function (data: {
   buffer_id: number;
   start: number;
   end: number;
@@ -675,9 +675,9 @@ globalThis.spellcheck_on_after_delete = function (data: {
       errors.filter((e) => e.end <= data.start || e.start >= data.end),
     );
   }
-};
+});
 
-globalThis.spellcheck_on_buffer_activated = async function (data: {
+registerHandler("spellcheck_on_buffer_activated", async function (data: {
   buffer_id: number;
 }): Promise<void> {
   await autoEnableForBuffer(data.buffer_id);
@@ -685,22 +685,22 @@ globalThis.spellcheck_on_buffer_activated = async function (data: {
   if (enabled && data.buffer_id && isSpellCheckBuffer(data.buffer_id)) {
     await checkVisibleLines(data.buffer_id);
   }
-};
+});
 
-globalThis.spellcheck_on_after_file_open = function (data: {
+registerHandler("spellcheck_on_after_file_open", function (data: {
   buffer_id: number;
   path: string;
 }): void {
   autoEnableForBuffer(data.buffer_id);
-};
+});
 
-globalThis.spellcheck_on_buffer_closed = function (data: {
+registerHandler("spellcheck_on_buffer_closed", function (data: {
   buffer_id: number;
 }): void {
   enabledBuffers.delete(data.buffer_id);
   misspelledWords.delete(data.buffer_id);
   bufferVersions.delete(data.buffer_id);
-};
+});
 
 // Register event listeners
 editor.on("lines_changed", "spellcheck_on_lines_changed");
@@ -714,15 +714,15 @@ editor.on("buffer_closed", "spellcheck_on_buffer_closed");
 // Commands
 // ============================================================================
 
-globalThis.spellcheck_toggle = async function (): Promise<void> {
+registerHandler("spellcheck_toggle", async function (): Promise<void> {
   if (enabled) {
     disableSpellCheck();
   } else {
     await enableSpellCheck();
   }
-};
+});
 
-globalThis.spellcheck_correct_word = async function (): Promise<void> {
+registerHandler("spellcheck_correct_word", async function (): Promise<void> {
   const wordInfo = await getWordAtCursor();
   if (!wordInfo) {
     editor.setStatus(editor.t("status.no_word"));
@@ -761,9 +761,9 @@ globalThis.spellcheck_correct_word = async function (): Promise<void> {
   editor.setStatus(
     editor.t("status.replaced", { old: wordInfo.word, new: replacement }),
   );
-};
+});
 
-globalThis.spellcheck_next_error = function (): void {
+registerHandler("spellcheck_next_error", function (): void {
   const bufferId = editor.getActiveBufferId();
   if (!bufferId) return;
 
@@ -787,9 +787,9 @@ globalThis.spellcheck_next_error = function (): void {
 
   editor.setBufferCursor(bufferId, next.start);
   editor.setStatus(`"${next.word}"`);
-};
+});
 
-globalThis.spellcheck_add_to_dict = async function (): Promise<void> {
+registerHandler("spellcheck_add_to_dict", async function (): Promise<void> {
   const wordInfo = await getWordAtCursor();
   if (!wordInfo) {
     editor.setStatus(editor.t("status.no_word"));
@@ -818,9 +818,9 @@ globalThis.spellcheck_add_to_dict = async function (): Promise<void> {
   }
 
   editor.setStatus(editor.t("status.word_added", { word: wordInfo.word }));
-};
+});
 
-globalThis.spellcheck_check_buffer = async function (): Promise<void> {
+registerHandler("spellcheck_check_buffer", async function (): Promise<void> {
   const bufferId = editor.getActiveBufferId();
   if (!bufferId) return;
 
@@ -832,9 +832,9 @@ globalThis.spellcheck_check_buffer = async function (): Promise<void> {
   } else {
     editor.setStatus(editor.t("status.errors_found", { count: String(count) }));
   }
-};
+});
 
-globalThis.spellcheck_language = async function (): Promise<void> {
+registerHandler("spellcheck_language", async function (): Promise<void> {
   if (availableLanguages.length === 0) {
     editor.setStatus(editor.t("status.no_dictionaries"));
     return;
@@ -865,7 +865,7 @@ globalThis.spellcheck_language = async function (): Promise<void> {
   }
 
   editor.setStatus(editor.t("status.language_changed", { lang: language }));
-};
+});
 
 // ============================================================================
 // Command Registration

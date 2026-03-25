@@ -203,7 +203,7 @@ function clearHighlights(bufferId: number): void {
 }
 
 // Handle render-start events (only clear virtual texts if buffer content changed)
-globalThis.onColorRenderStart = function(data: { buffer_id: number }): void {
+registerHandler("onColorRenderStart", function(data: { buffer_id: number }): void {
   if (!config.enabled) return;
 
   // Only clear and recreate virtual texts if the buffer content changed
@@ -211,10 +211,10 @@ globalThis.onColorRenderStart = function(data: { buffer_id: number }): void {
     clearHighlights(data.buffer_id);
     dirtyBuffers.delete(data.buffer_id);
   }
-};
+});
 
 // Handle lines_changed events (batched for efficiency)
-globalThis.onColorLinesChanged = function(data: {
+registerHandler("onColorLinesChanged", function(data: {
   buffer_id: number;
   lines: Array<{
     line_number: number;
@@ -229,21 +229,21 @@ globalThis.onColorLinesChanged = function(data: {
   for (const line of data.lines) {
     highlightLine(data.buffer_id, line.line_number, line.byte_start, line.content);
   }
-};
+});
 
 // Handle buffer content changes - mark buffer as needing virtual text refresh
-globalThis.onColorAfterInsert = function(data: { buffer_id: number }): void {
+registerHandler("onColorAfterInsert", function(data: { buffer_id: number }): void {
   dirtyBuffers.add(data.buffer_id);
-};
+});
 
-globalThis.onColorAfterDelete = function(data: { buffer_id: number }): void {
+registerHandler("onColorAfterDelete", function(data: { buffer_id: number }): void {
   dirtyBuffers.add(data.buffer_id);
-};
+});
 
 // Handle buffer close events
-globalThis.onColorBufferClosed = function(data: { buffer_id: number }): void {
+registerHandler("onColorBufferClosed", function(data: { buffer_id: number }): void {
   dirtyBuffers.delete(data.buffer_id);
-};
+});
 
 // Register hooks
 editor.on("render_start", "onColorRenderStart");
@@ -253,22 +253,22 @@ editor.on("after_delete", "onColorAfterDelete");
 editor.on("buffer_closed", "onColorBufferClosed");
 
 // Plugin commands
-globalThis.colorHighlighterEnable = function(): void {
+registerHandler("colorHighlighterEnable", function(): void {
   config.enabled = true;
   // Refresh lines so next render processes all visible lines
   const bufferId = editor.getActiveBufferId();
   editor.refreshLines(bufferId);
   editor.setStatus(editor.t("status.enabled"));
-};
+});
 
-globalThis.colorHighlighterDisable = function(): void {
+registerHandler("colorHighlighterDisable", function(): void {
   config.enabled = false;
   const bufferId = editor.getActiveBufferId();
   clearHighlights(bufferId);
   editor.setStatus(editor.t("status.disabled"));
-};
+});
 
-globalThis.colorHighlighterToggle = function(): void {
+registerHandler("colorHighlighterToggle", function(): void {
   config.enabled = !config.enabled;
   const bufferId = editor.getActiveBufferId();
   if (config.enabled) {
@@ -278,7 +278,7 @@ globalThis.colorHighlighterToggle = function(): void {
     clearHighlights(bufferId);
   }
   editor.setStatus(config.enabled ? editor.t("status.enabled") : editor.t("status.disabled"));
-};
+});
 
 // Register commands
 editor.registerCommand(

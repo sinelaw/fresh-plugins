@@ -196,29 +196,29 @@ async function expandAbbreviation(): Promise<boolean> {
 /**
  * Command handler for manual expansion
  */
-globalThis.emmet_expand_abbreviation = async function (): Promise<void> {
+registerHandler("emmet_expand_abbreviation", async function (): Promise<void> {
   const success = await expandAbbreviation();
   if (!success) {
     editor.setStatus(editor.t("status.no_abbreviation"));
   }
-};
+});
 
 /**
  * Command handler for Tab key expansion
  */
-globalThis.emmet_expand_or_pass = async function (): Promise<void> {
+registerHandler("emmet_expand_or_pass", async function (): Promise<void> {
   const success = await expandAbbreviation();
   if (!success) {
     // Fall through to default Tab behavior
     editor.executeAction("insert_tab");
   }
-};
+});
 
 /**
  * Command handler for prompt-based expansion
  * Opens a prompt asking for abbreviation, then expands and inserts it
  */
-globalThis.emmet_expand_from_prompt = async function (): Promise<void> {
+registerHandler("emmet_expand_from_prompt", async function (): Promise<void> {
   const abbr = await editor.prompt("Emmet abbreviation:", "");
 
   if (!abbr) {
@@ -241,7 +241,7 @@ globalThis.emmet_expand_from_prompt = async function (): Promise<void> {
   } else {
     editor.setStatus(editor.t("status.could_not_expand", { abbr }));
   }
-};
+});
 
 // Register commands
 editor.registerCommand(
@@ -259,12 +259,12 @@ editor.registerCommand(
 );
 
 // Define emmet-html mode with Tab key bound to Emmet expansion
-editor.defineMode("emmet-html", null, [
+editor.defineMode("emmet-html", [
   ["Tab", "emmet_expand_or_pass"],
 ], false); // read_only = false to allow typing
 
 // Define emmet-css mode with Tab key bound to Emmet expansion
-editor.defineMode("emmet-css", null, [
+editor.defineMode("emmet-css", [
   ["Tab", "emmet_expand_or_pass"],
 ], false);
 
@@ -297,16 +297,16 @@ function activateEmmetModeForBuffer(): void {
 /**
  * Handler for buffer_activated event
  */
-globalThis.emmet_on_buffer_activated = function (): void {
+registerHandler("emmet_on_buffer_activated", function (): void {
   activateEmmetModeForBuffer();
-};
+});
 
 /**
  * Handler for after_file_open event
  */
-globalThis.emmet_on_after_file_open = function (): void {
+registerHandler("emmet_on_after_file_open", function (): void {
   activateEmmetModeForBuffer();
-};
+});
 
 // Register event handlers
 editor.on("buffer_activated", "emmet_on_buffer_activated");
@@ -382,7 +382,7 @@ function showInstallPopup(reason: string): void {
 /**
  * Handle installation popup actions
  */
-globalThis.emmet_on_install_action = function (data: any): void {
+registerHandler("emmet_on_install_action", function (data: any): void {
   if (data.popup_id !== "emmet-install-help") {
     return;
   }
@@ -418,7 +418,7 @@ globalThis.emmet_on_install_action = function (data: any): void {
     default:
       editor.debug(`[emmet] Unknown action: ${data.action_id}`);
   }
-};
+});
 
 editor.on("action_popup_result", "emmet_on_install_action");
 

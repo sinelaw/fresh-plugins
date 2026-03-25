@@ -60,7 +60,7 @@ let elixirLspError: {
 /**
  * Handle LSP server errors for Elixir
  */
-globalThis.on_elixir_lsp_server_error = function (
+registerHandler("on_elixir_lsp_server_error", function (
   data: LspServerErrorData
 ): void {
   // Only handle Elixir language errors
@@ -91,7 +91,7 @@ globalThis.on_elixir_lsp_server_error = function (
   } else {
     editor.setStatus(`Elixir LSP error: ${data.message}`);
   }
-};
+});
 
 // Register hook for LSP server errors
 editor.on("lsp_server_error", "on_elixir_lsp_server_error");
@@ -99,7 +99,7 @@ editor.on("lsp_server_error", "on_elixir_lsp_server_error");
 /**
  * Handle status bar click when there's an Elixir LSP error
  */
-globalThis.on_elixir_lsp_status_clicked = function (
+registerHandler("on_elixir_lsp_status_clicked", function (
   data: LspStatusClickedData
 ): void {
   // Only handle Elixir language clicks when there's an error
@@ -144,7 +144,7 @@ globalThis.on_elixir_lsp_status_clicked = function (
     message: message,
     actions: actions,
   });
-};
+});
 
 // Register hook for status bar clicks
 editor.on("lsp_status_clicked", "on_elixir_lsp_status_clicked");
@@ -152,7 +152,7 @@ editor.on("lsp_status_clicked", "on_elixir_lsp_status_clicked");
 /**
  * Handle action popup results for Elixir LSP help
  */
-globalThis.on_elixir_lsp_action_result = function (
+registerHandler("on_elixir_lsp_action_result", function (
   data: ActionPopupResultData
 ): void {
   // Only handle our popup
@@ -213,7 +213,7 @@ globalThis.on_elixir_lsp_action_result = function (
     default:
       editor.debug(`elixir-lsp: Unknown action: ${data.action_id}`);
   }
-};
+});
 
 // Register hook for action popup results
 editor.on("action_popup_result", "on_elixir_lsp_action_result");

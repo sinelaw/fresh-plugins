@@ -219,7 +219,7 @@ function transformCsvTokens(
 /**
  * Handle view transform request
  */
-globalThis.onCsvViewTransform = async function(data: {
+registerHandler("onCsvViewTransform", async function(data: {
   buffer_id: number;
   split_id: number;
   viewport_start: number;
@@ -262,7 +262,7 @@ globalThis.onCsvViewTransform = async function(data: {
     transformed as unknown as ViewTokenWire[],
     { composeWidth: totalWidth + 10, columnGuides: null }
   );
-};
+});
 
 /**
  * Enable CSV view for buffer
@@ -299,7 +299,7 @@ function disableCsvView(bufferId: number): void {
 /**
  * Toggle CSV view
  */
-globalThis.csv_toggle = async function(): Promise<void> {
+async function toggleCsvView(): Promise<void> {
   const bufferId = editor.getActiveBufferId();
   if (bufferId === null || bufferId === undefined) {
     editor.setStatus("No buffer");
@@ -316,14 +316,15 @@ globalThis.csv_toggle = async function(): Promise<void> {
   } else {
     await enableCsvView(bufferId);
   }
-};
+}
 
-globalThis.csv_open = globalThis.csv_toggle;
+registerHandler("csv_toggle", toggleCsvView);
+registerHandler("csv_open", toggleCsvView);
 
-globalThis.onCsvBufferClosed = function(data: { buffer_id: number }): void {
+registerHandler("onCsvBufferClosed", function(data: { buffer_id: number }): void {
   csvBuffers.delete(data.buffer_id);
   bufferConfigs.delete(data.buffer_id);
-};
+});
 
 // Register
 editor.on("view_transform_request", "onCsvViewTransform");
