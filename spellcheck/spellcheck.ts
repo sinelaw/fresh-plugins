@@ -58,6 +58,34 @@ function savePersonalDict(): void {
 }
 
 // ============================================================================
+// Persisted Language
+// ============================================================================
+
+function getLanguagePath(): string {
+  return editor.pathJoin(editor.getConfigDir(), "spell-language.txt");
+}
+
+function loadPersistedLanguage(): void {
+  const languagePath = getLanguagePath();
+  const content = editor.readFile(languagePath);
+  if (content) {
+    const persisted = content.trim();
+    if (persisted) {
+      language = persisted;
+      editor.debug(`[spellcheck] Loaded persisted language '${language}' from ${languagePath}`);
+      return;
+    }
+  }
+  editor.debug(`[spellcheck] No persisted language at ${languagePath}, using default '${language}'`);
+}
+
+function savePersistedLanguage(): void {
+  const languagePath = getLanguagePath();
+  editor.writeFile(languagePath, language);
+  editor.debug(`[spellcheck] Saved language '${language}' to ${languagePath}`);
+}
+
+// ============================================================================
 // Spell Checker Detection
 // ============================================================================
 
@@ -855,6 +883,7 @@ registerHandler("spellcheck_language", async function (): Promise<void> {
   if (selected === null || selected === "") return;
 
   language = selected;
+  savePersistedLanguage();
   correctCache.clear();
   misspelledCache.clear();
 
@@ -924,6 +953,8 @@ loadPersonalDict();
 editor.debug(
   `[spellcheck] Plugin loaded, personal dictionary: ${personalDict.size} words`,
 );
+
+loadPersistedLanguage();
 
 // Auto-enable for current buffer on load
 autoEnableForBuffer();
