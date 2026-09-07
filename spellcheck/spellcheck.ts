@@ -198,11 +198,13 @@ function utf8ByteLength(str: string): number {
 
 /**
  * Extract words from text, returning byte offsets (not character offsets).
- * Words only contain ASCII chars so word.length == byte length of word.
+ * Words may contain any Unicode letter (accented vowels, ñ, etc.), so a
+ * word's UTF-16 length can differ from its UTF-8 byte length — callers must
+ * use utf8ByteLength(word), not word.length, when they need the byte span.
  */
 function extractWords(text: string): Array<{ word: string; offset: number }> {
   const results: Array<{ word: string; offset: number }> = [];
-  const regex = /[a-zA-Z']+/g;
+  const regex = /[\p{L}']+/gu;
   let match;
   while ((match = regex.exec(text)) !== null) {
     const word = match[0];
@@ -326,7 +328,7 @@ function checkLine(
   for (const w of words) {
     if (isKnownCorrect(w.word)) continue;
     if (isKnownMisspelled(w.word)) {
-      addMisspelledOverlay(bufferId, byteStart + w.offset, byteStart + w.offset + w.word.length, w.word);
+      addMisspelledOverlay(bufferId, byteStart + w.offset, byteStart + w.offset + utf8ByteLength(w.word), w.word);
       continue;
     }
     toCheck.push(w);
@@ -351,7 +353,7 @@ function checkLine(
     let added = 0;
     for (const entry of toCheck) {
       if (misspelled.has(entry.word)) {
-        addMisspelledOverlay(bufferId, byteStart + entry.offset, byteStart + entry.offset + entry.word.length, entry.word);
+        addMisspelledOverlay(bufferId, byteStart + entry.offset, byteStart + entry.offset + utf8ByteLength(entry.word), entry.word);
         added++;
       }
     }
@@ -411,7 +413,7 @@ async function checkVisibleLines(bufferId: number): Promise<number> {
   for (const entry of allWords) {
     if (misspelled.has(entry.word)) {
       const s = entry.lineByteStart + entry.offset;
-      const e = s + entry.word.length;
+      const e = s + utf8ByteLength(entry.word);
       editor.addOverlay(bufferId, NAMESPACE, s, e, {
         fg: [255, 100, 100],
       });
@@ -464,7 +466,7 @@ async function checkBuffer(bufferId: number): Promise<number> {
   for (const entry of allWords) {
     if (misspelled.has(entry.word)) {
       const start = entry.lineByteStart + entry.offset;
-      const end = start + entry.word.length;
+      const end = start + utf8ByteLength(entry.word);
       editor.addOverlay(bufferId, NAMESPACE, start, end, {
         fg: [255, 100, 100],
       });
@@ -502,12 +504,12 @@ async function getWordAtCursor(): Promise<{
 
   editor.debug(`[spellcheck] getWordAtCursor: cursor=${cursorPos}, readStart=${readStart}, cursorInText=${cursorInText}, textLen=${text.length}`);
 
-  const regex = /[a-zA-Z']+/g;
+  const regex = /[\p{L}']+/gu;
   let match;
   while ((match = regex.exec(text)) !== null) {
     // Convert character offset to byte offset (cursor position is in bytes)
     const wordByteStart = utf8ByteLength(text.substring(0, match.index));
-    const wordByteEnd = wordByteStart + match[0].length; // ASCII word, byte len == char len
+    const wordByteEnd = wordByteStart + utf8ByteLength(match[0]);
     if (cursorInText >= wordByteStart && cursorInText <= wordByteEnd) {
       editor.debug(`[spellcheck] getWordAtCursor: found "${match[0]}" at byte ${readStart + wordByteStart}`);
       return {
