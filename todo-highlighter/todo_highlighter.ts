@@ -168,31 +168,27 @@ registerHandler("todoHighlighterShowKeywords", function(): void {
 
 // Register commands
 editor.registerCommand(
-  "%cmd.enable",
-  "%cmd.enable_desc",
-  "todoHighlighterEnable",
-  "normal"
+  "TODO Highlighter: Enable",
+  "Enable TODO keyword highlighting",
+  "todoHighlighterEnable"
 );
 
 editor.registerCommand(
-  "%cmd.disable",
-  "%cmd.disable_desc",
-  "todoHighlighterDisable",
-  "normal"
+  "TODO Highlighter: Disable",
+  "Disable TODO keyword highlighting",
+  "todoHighlighterDisable"
 );
 
 editor.registerCommand(
-  "%cmd.toggle",
-  "%cmd.toggle_desc",
-  "todoHighlighterToggle",
-  "normal"
+  "TODO Highlighter: Toggle",
+  "Toggle TODO keyword highlighting",
+  "todoHighlighterToggle"
 );
 
 editor.registerCommand(
-  "%cmd.show_keywords",
-  "%cmd.show_keywords_desc",
-  "todoHighlighterShowKeywords",
-  "normal"
+  "TODO Highlighter: Show Keywords",
+  "Show currently tracked keywords",
+  "todoHighlighterShowKeywords"
 );
 
 // Initialization
